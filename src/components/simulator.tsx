@@ -65,30 +65,25 @@ export function Simulator() {
   return (
     <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       {/* Encabezado */}
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="grid h-10 w-10 place-items-center rounded-xl text-[15px] font-semibold text-[#1a1205]"
-            style={{
-              background:
-                "linear-gradient(180deg, var(--gold), var(--gold-soft))",
-              boxShadow: "0 6px 18px -8px rgba(212,175,106,0.7)",
-            }}
+            className="grid h-10 w-10 place-items-center rounded-[3px] bg-[var(--primary)] text-[15px] font-bold text-[var(--on-primary)]"
             aria-hidden
           >
             N
           </div>
           <div>
-            <h1 className="text-[17px] font-semibold leading-tight text-[var(--text)]">
+            <h1 className="text-[17px] font-bold leading-tight text-[var(--on-surface)]">
               NewCo
             </h1>
-            <p className="text-[12.5px] text-[var(--text-muted)]">
+            <p className="label-caps text-[10px] text-[var(--on-surface-variant)]">
               Simulador de costo aterrizado · diamante B2B
             </p>
           </div>
         </div>
 
-        <div className="no-print flex items-center gap-3">
+        <div className="no-print flex items-center gap-5">
           <Segmented<View>
             ariaLabel="Cambiar vista"
             value={view}
@@ -106,12 +101,12 @@ export function Simulator() {
       </header>
 
       {/* Identidad de la cotización */}
-      <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--border)] pb-5">
-        <span className="text-[15px] font-medium text-[var(--text)]">
+      <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--hairline)] pb-5">
+        <span className="text-[15px] font-semibold text-[var(--on-surface)]">
           {raw.stoneDesc || "—"}
         </span>
         {raw.stoneCert ? (
-          <span className="tabular rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11.5px] text-[var(--text-muted)]">
+          <span className="tabular rounded-[2px] border border-[var(--hairline)] bg-[var(--surface-low)] px-2.5 py-1 text-[11.5px] text-[var(--on-surface-variant)]">
             {raw.stoneCert}
           </span>
         ) : null}
@@ -126,7 +121,7 @@ export function Simulator() {
         </div>
 
         <div className="flex flex-col gap-6 lg:col-span-7 xl:col-span-8 print-full">
-          <HeroCard allin={result.allin} price={result.price} />
+          <HeroCard result={result} servicioLabel={marginLabel} />
           <CompositionBar result={result} servicioLabel={marginLabel} />
           <BreakdownLedger result={result} view={view} marginLabel={marginLabel} />
           {view === "interna" ? (
@@ -135,7 +130,7 @@ export function Simulator() {
         </div>
       </div>
 
-      <footer className="no-print mt-10 text-center text-[11px] text-[var(--text-faint)]">
+      <footer className="no-print mt-10 label-caps text-center text-[9px] text-[var(--outline)]">
         v1 standalone · supuestos editables a mano · IVA acreditable, no es
         pasivo
       </footer>

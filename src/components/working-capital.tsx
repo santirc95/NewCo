@@ -19,17 +19,18 @@ export function WorkingCapitalCard({ float }: WorkingCapitalProps) {
         <CardTitle>Capital de trabajo: cero</CardTitle>
       </CardHeader>
       <CardBody>
-        <p className="text-[13.5px] leading-relaxed text-[var(--text-muted)]">
+        <p className="text-[13.5px] leading-relaxed text-[var(--on-surface-variant)]">
           El joyero paga de contado por adelantado. Su anticipo cubre la
           totalidad del desembolso de la operación, de modo que NewCo no aporta
           capital de trabajo propio.
         </p>
-        <div className="mt-5 flex items-end justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3.5">
-          <span className="text-[12px] leading-snug text-[var(--text-muted)]">
-            Anticipo mínimo para
-            <br className="hidden sm:block" /> cubrir el desembolso
+        <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--hairline)] pt-4">
+          <span className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+            Anticipo mínimo
+            <br />
+            para el desembolso
           </span>
-          <span className="tabular text-[20px] font-semibold text-[var(--gold)]">
+          <span className="tabular text-[22px] font-semibold text-[var(--on-surface)]">
             {formatMXN(float)}
           </span>
         </div>

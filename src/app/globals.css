@@ -1,63 +1,66 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   NewCo — piel visual: terminal financiera, tema carbón, acento oro champán.
-   La audacia (gradiente protagonista) vive sólo en el número héroe y en la
-   barra de composición. El resto, silencioso.
+   NewCo — piel visual "Precision Ledger" (Stitch).
+   Technical Luxury / Terminal-Brutalism: "Onyx & Paper", hairline borders,
+   cifras monoespaciadas, hero oscuro con mesh ámbar. Fondo claro tipo papel.
 --------------------------------------------------------------------------- */
 
 :root {
-  /* Superficies carbón, de más profunda a más clara */
-  --bg: #08090b;
-  --surface: #101114;
-  --surface-2: #16181c;
-  --surface-3: #1d2025;
+  /* Superficies — grises papel, de fondo a contenedor */
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --surface-low: #f3f4f5;
+  --surface-container: #edeeef;
+  --surface-high: #e7e8e9;
+  --surface-highest: #e1e3e4;
 
-  /* Bordes y líneas */
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.12);
+  /* Texto / tinta */
+  --on-surface: #191c1d;
+  --on-surface-variant: #4c4546;
+  --outline: #7e7576;
+  --outline-variant: #cfc4c5;
+  --hairline: rgba(126, 117, 118, 0.3);
 
-  /* Texto */
-  --text: #f4f4f3;
-  --text-muted: #a0a1a6;
-  --text-faint: #6c6e74;
+  /* Onyx & accent */
+  --primary: #000000;
+  --on-primary: #ffffff;
+  --secondary: #a23e25; /* óxido — estados críticos / marcadores */
 
-  /* Acento oro champán / ámbar */
-  --gold: #e6c98a;
-  --gold-soft: #d4af6a;
-  --gold-deep: #b08642;
-  --amber: #f5a623;
-  --amber-flag: #fbbf24;
+  /* Acentos categóricos para visualización de datos */
+  --chart-orange: #ff7a00;
+  --chart-lavender: #a8a5ff;
+  --chart-blue: #00a3ff;
 
-  /* Segmentos de la barra de composición (familia oro, escalonada) */
-  --seg-piedra-from: #f0d9a3;
-  --seg-piedra-to: #d8b56a;
-  --seg-logi-from: #cfa256;
-  --seg-logi-to: #b0823c;
-  --seg-aduana-from: #a87a3c;
-  --seg-aduana-to: #855c28;
-  --seg-servicio-from: #6f5b3e;
-  --seg-servicio-to: #4d3f2b;
+  /* Aviso (flag IGI) en ámbar, sobre claro */
+  --warn-bg: rgba(255, 122, 0, 0.08);
+  --warn-border: rgba(255, 122, 0, 0.35);
+  --warn-text: #9a4a00;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
-  --color-border: var(--border);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-text-faint: var(--text-faint);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
-  --color-amber: var(--amber);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface-low: var(--surface-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-high: var(--surface-high);
+  --color-surface-highest: var(--surface-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-chart-orange: var(--chart-orange);
+  --color-chart-lavender: var(--chart-lavender);
+  --color-chart-blue: var(--chart-blue);
+  --font-sans: var(--font-hanken);
+  --font-mono: var(--font-jetbrains);
 }
 
 * {
-  border-color: var(--border);
+  border-color: var(--hairline);
 }
 
 html {
@@ -66,37 +69,51 @@ html {
 
 body {
   background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  color: var(--on-surface);
+  font-family: var(--font-hanken), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Sutil textura de fondo: viñeta cálida muy tenue, no satura */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 500px at 78% -10%, rgba(230, 201, 138, 0.05), transparent 70%),
-    radial-gradient(700px 500px at 0% 0%, rgba(255, 255, 255, 0.02), transparent 60%);
-  z-index: 0;
-}
-
-/* Cifras tabulares — feel de terminal financiera */
+/* Cifras tabulares — JetBrains Mono, feel de terminal financiera */
 .tabular {
-  font-family: var(--font-mono), ui-monospace, monospace;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-  letter-spacing: -0.01em;
 }
 
-/* Foco de teclado visible y consistente */
+/* Etiqueta "Label Caps" — metadata mono en mayúsculas */
+.label-caps {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Hero: mesh oscuro tipo "diamante refractivo" */
+.gradient-mesh {
+  background-color: #0a0a0a;
+  background-image:
+    radial-gradient(at 0% 0%, #1a1a1a 0px, transparent 70%),
+    radial-gradient(at 100% 0%, #ff9500 0px, transparent 70%),
+    radial-gradient(at 50% 100%, #4a3b2a 0px, transparent 100%);
+}
+
+/* Grano sutil (textura "stardust") generado con feTurbulence, sin red externa */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Foco de teclado visible */
 :focus-visible {
-  outline: 2px solid var(--gold-soft);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* Respeta reduced-motion */
@@ -113,27 +130,11 @@ body::before {
 
 /* ---------------------------------------------------------------------------
    Print stylesheet — Export PDF v1 (window.print()).
-   Desacoplado a propósito: en v2 se reemplaza por render server-side con folio.
+   Desacoplado: en v2 se reemplaza por render server-side con folio.
 --------------------------------------------------------------------------- */
 @media print {
-  :root {
-    --bg: #ffffff;
-    --surface: #ffffff;
-    --surface-2: #ffffff;
-    --surface-3: #ffffff;
-    --border: #d8d8d8;
-    --text: #111111;
-    --text-muted: #444444;
-    --text-faint: #777777;
-  }
-
   body {
     background: #ffffff !important;
-    color: #111111 !important;
-  }
-
-  body::before {
-    display: none !important;
   }
 
   .no-print {
@@ -147,18 +148,16 @@ body::before {
 
   .print-card {
     border: 1px solid #d8d8d8 !important;
-    background: #ffffff !important;
     box-shadow: none !important;
     break-inside: avoid;
   }
 
-  /* En impresión, el héroe vuelve a tinta legible sobre blanco */
-  .hero-card {
+  /* En impresión el hero pasa a tinta legible sobre crema */
+  .gradient-mesh {
     background: #fbf6ea !important;
-    color: #111111 !important;
-    border: 1px solid #e3d3a8 !important;
   }
 
+  .hero-card,
   .hero-card * {
     color: #1a1205 !important;
   }

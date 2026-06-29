@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
-/* Card                                                                       */
+/* Card — superficie papel, borde hairline, esquinas rounded-xl               */
 /* -------------------------------------------------------------------------- */
 
 export function Card({
@@ -14,9 +14,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "print-card relative rounded-2xl border border-[var(--border)] bg-[var(--surface)]",
-        "shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_24px_48px_-24px_rgba(0,0,0,0.7)]",
-        "transition-colors duration-300",
+        "print-card relative rounded-xl border border-[var(--hairline)] bg-[var(--surface)]",
         className,
       )}
       {...props}
@@ -39,7 +37,7 @@ export function CardTitle({
   return (
     <div
       className={cn(
-        "text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-faint)]",
+        "label-caps text-[11px] text-[var(--on-surface)]",
         className,
       )}
       {...props}
@@ -57,7 +55,7 @@ export function CardBody({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Field + Input                                                              */
+/* Field + Ledger Input — label-caps arriba, sólo borde inferior              */
 /* -------------------------------------------------------------------------- */
 
 interface FieldProps {
@@ -70,10 +68,10 @@ interface FieldProps {
 
 export function Field({ label, htmlFor, children, hint, className }: FieldProps) {
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-1", className)}>
       <label
         htmlFor={htmlFor}
-        className="text-[12px] font-medium text-[var(--text-muted)]"
+        className="label-caps text-[10px] text-[var(--on-surface-variant)]"
       >
         {label}
       </label>
@@ -88,38 +86,32 @@ interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   prefix?: string;
   /** Texto fijo a la derecha (p.ej. "%"). */
   suffix?: string;
-  /** Alinea el valor a la derecha y usa cifras tabulares. */
+  /** Alinea el valor a la derecha y usa cifras tabulares (estilo ledger). */
   numeric?: boolean;
 }
 
 export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
   function TextInput({ prefix, suffix, numeric, className, ...props }, ref) {
     return (
-      <div
-        className={cn(
-          "group flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]",
-          "px-3 h-11 transition-colors duration-200",
-          "hover:border-[var(--border-strong)] focus-within:border-[var(--gold-soft)]",
-          "focus-within:bg-gradient-to-b focus-within:from-[rgba(230,201,138,0.05)] focus-within:to-transparent",
-        )}
-      >
+      <div className="group flex items-baseline gap-2 border-b border-[var(--outline-variant)] py-1.5 transition-colors duration-200 focus-within:border-b-2 focus-within:border-[var(--primary)]">
         {prefix ? (
-          <span className="tabular shrink-0 text-[12px] text-[var(--text-faint)] select-none">
+          <span className="tabular shrink-0 text-[12px] text-[var(--outline)] select-none">
             {prefix}
           </span>
         ) : null}
         <input
           ref={ref}
           className={cn(
-            "min-w-0 flex-1 bg-transparent text-[var(--text)] outline-none placeholder:text-[var(--text-faint)]",
-            "text-[14px]",
-            numeric && "tabular text-right",
+            "min-w-0 flex-1 bg-transparent text-[var(--on-surface)] outline-none placeholder:text-[var(--outline-variant)]",
+            numeric
+              ? "tabular text-right text-[18px] font-medium"
+              : "text-[15px]",
             className,
           )}
           {...props}
         />
         {suffix ? (
-          <span className="tabular shrink-0 text-[12px] text-[var(--text-faint)] select-none">
+          <span className="tabular shrink-0 text-[12px] text-[var(--outline)] select-none">
             {suffix}
           </span>
         ) : null}
@@ -129,7 +121,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
 );
 
 /* -------------------------------------------------------------------------- */
-/* Switch (toggle)                                                            */
+/* Tabs subrayados (Interna / Cliente)                                        */
 /* -------------------------------------------------------------------------- */
 
 interface SegmentedProps<T extends string> {
@@ -146,11 +138,7 @@ export function Segmented<T extends string>({
   ariaLabel,
 }: SegmentedProps<T>) {
   return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      className="inline-flex items-center rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1"
-    >
+    <div role="tablist" aria-label={ariaLabel} className="flex items-center gap-5">
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -161,10 +149,10 @@ export function Segmented<T extends string>({
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "relative rounded-full px-4 py-1.5 text-[12.5px] font-medium transition-all duration-200",
+              "pb-1 text-[14px] transition-colors duration-200 border-b-2",
               active
-                ? "bg-gradient-to-b from-[var(--gold)] to-[var(--gold-soft)] text-[#1a1205] shadow-[0_2px_8px_-2px_rgba(212,175,106,0.5)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                ? "border-[var(--primary)] font-bold text-[var(--primary)]"
+                : "border-transparent font-medium text-[var(--outline)] hover:text-[var(--on-surface)]",
             )}
           >
             {opt.label}
@@ -176,7 +164,7 @@ export function Segmented<T extends string>({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Button                                                                     */
+/* Button — primario onyx sólido (sharp + label-caps) / secundario outline    */
 /* -------------------------------------------------------------------------- */
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -190,12 +178,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type="button"
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-[13px] font-medium",
+          "label-caps inline-flex items-center justify-center gap-2 rounded-[2px] px-4 h-10 text-[11px]",
           "transition-all duration-200 active:scale-[0.98]",
           variant === "ghost" &&
-            "border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] hover:border-[var(--gold-soft)] hover:bg-[var(--surface-3)]",
+            "border border-[var(--outline-variant)] bg-transparent text-[var(--on-surface)] hover:border-[var(--primary)]",
           variant === "solid" &&
-            "bg-gradient-to-b from-[var(--gold)] to-[var(--gold-soft)] text-[#1a1205] hover:brightness-105 shadow-[0_4px_16px_-6px_rgba(212,175,106,0.6)]",
+            "bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90",
           className,
         )}
         {...props}

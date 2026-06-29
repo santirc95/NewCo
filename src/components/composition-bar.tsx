@@ -12,41 +12,23 @@ interface CompositionBarProps {
 interface SegmentDef {
   key: keyof QuoteResult["composition"];
   label: string;
-  from: string;
-  to: string;
+  color: string;
 }
 
 /**
- * Barra de composición — elemento central. 4 segmentos proporcionales sobre el
- * precio (sin IVA), con gradientes de la familia oro escalonada. Permitido el
- * gradiente aquí (junto con el héroe); el resto de la UI es silencioso.
+ * Barra de composición — segmentos proporcionales sobre el precio (sin IVA),
+ * con la paleta categórica de Stitch (onyx / azul / lavanda / naranja).
  */
 export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
   const segments: SegmentDef[] = [
-    {
-      key: "piedra",
-      label: "Piedra",
-      from: "var(--seg-piedra-from)",
-      to: "var(--seg-piedra-to)",
-    },
+    { key: "piedra", label: "Piedra", color: "var(--on-surface)" },
     {
       key: "logistica",
       label: "Logística + seguro",
-      from: "var(--seg-logi-from)",
-      to: "var(--seg-logi-to)",
+      color: "var(--chart-blue)",
     },
-    {
-      key: "aduana",
-      label: "Aduana",
-      from: "var(--seg-aduana-from)",
-      to: "var(--seg-aduana-to)",
-    },
-    {
-      key: "servicio",
-      label: servicioLabel,
-      from: "var(--seg-servicio-from)",
-      to: "var(--seg-servicio-to)",
-    },
+    { key: "aduana", label: "Aduana", color: "var(--chart-lavender)" },
+    { key: "servicio", label: servicioLabel, color: "var(--chart-orange)" },
   ];
 
   return (
@@ -57,7 +39,7 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
       <CardBody>
         {/* Barra */}
         <div
-          className="flex h-5 w-full gap-[2px] overflow-hidden rounded-full bg-[var(--surface-3)] p-[2px]"
+          className="grain relative flex h-4 w-full overflow-hidden rounded-full bg-[var(--surface-high)]"
           role="img"
           aria-label="Distribución del precio por componente"
         >
@@ -66,12 +48,12 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
             return (
               <div
                 key={seg.key}
-                className="h-full rounded-full transition-[flex-grow] duration-500 ease-out"
+                className="h-full transition-[flex-grow] duration-700 ease-out"
                 style={{
                   flexGrow: Math.max(pct, 0),
                   flexBasis: 0,
-                  minWidth: pct > 0 ? 4 : 0,
-                  background: `linear-gradient(180deg, ${seg.from}, ${seg.to})`,
+                  minWidth: pct > 0 ? 3 : 0,
+                  background: seg.color,
                 }}
                 title={`${seg.label}: ${formatPct(pct)}`}
               />
@@ -85,18 +67,16 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
             <li key={seg.key} className="flex items-center gap-2.5">
               <span
                 aria-hidden
-                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{
-                  background: `linear-gradient(180deg, ${seg.from}, ${seg.to})`,
-                }}
+                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                style={{ background: seg.color }}
               />
-              <span className="flex-1 truncate text-[13px] text-[var(--text-muted)]">
+              <span className="flex-1 truncate text-[13px] text-[var(--on-surface-variant)]">
                 {seg.label}
               </span>
-              <span className="tabular text-[13px] font-medium text-[var(--text)]">
+              <span className="tabular text-[13px] font-medium text-[var(--on-surface)]">
                 {formatPct(result.compositionPct[seg.key])}
               </span>
-              <span className="tabular hidden w-28 text-right text-[12px] text-[var(--text-faint)] sm:inline">
+              <span className="tabular hidden w-28 text-right text-[12px] text-[var(--outline)] sm:inline">
                 {formatMXN(result.composition[seg.key])}
               </span>
             </li>

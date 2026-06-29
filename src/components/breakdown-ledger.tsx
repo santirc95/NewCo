@@ -12,50 +12,68 @@ interface BreakdownLedgerProps {
   marginLabel: string;
 }
 
-type RowVariant = "item" | "sub" | "subtotal";
+type RowVariant = "item" | "sub" | "subtotal" | "total";
 
 function LedgerRow({
   label,
   value,
   variant = "item",
   tag,
+  marker,
 }: {
   label: string;
   value: number;
   variant?: RowVariant;
   tag?: string;
+  marker?: string;
 }) {
+  const isTotal = variant === "total"; // fila negra (firma terminal-brutalista)
   const isSubtotal = variant === "subtotal";
   const isSub = variant === "sub";
   return (
     <div
       className={cn(
-        "flex items-baseline justify-between gap-4 py-2",
-        isSubtotal &&
-          "mt-0.5 rounded-lg bg-[var(--surface-2)] px-3 -mx-1 border border-[var(--border)]",
-        isSub && "pl-5",
+        "flex items-center justify-between gap-4 px-3 py-2.5",
+        isTotal && "bg-[var(--primary)] text-[var(--on-primary)]",
+        isSubtotal && "bg-[var(--surface-low)]",
+        isSub && "pl-6",
       )}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        {isSub ? (
-          <span aria-hidden className="text-[var(--text-faint)]">
+      <div className="flex min-w-0 items-center gap-2.5">
+        {marker ? (
+          <span
+            aria-hidden
+            className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
+            style={{ background: marker }}
+          />
+        ) : isSub ? (
+          <span aria-hidden className="text-[var(--outline)]">
             ·
           </span>
         ) : null}
         <span
           className={cn(
             "truncate",
-            isSubtotal
-              ? "text-[13.5px] font-semibold text-[var(--text)]"
-              : isSub
-                ? "text-[13px] text-[var(--text-faint)]"
-                : "text-[13.5px] text-[var(--text-muted)]",
+            isTotal
+              ? "text-[14px] font-semibold"
+              : isSubtotal
+                ? "text-[13.5px] font-semibold text-[var(--on-surface)]"
+                : isSub
+                  ? "text-[13px] text-[var(--on-surface-variant)]"
+                  : "text-[13.5px] text-[var(--on-surface)]",
           )}
         >
           {label}
         </span>
         {tag ? (
-          <span className="shrink-0 rounded-full border border-[rgba(245,166,35,0.3)] bg-[rgba(245,166,35,0.08)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--amber)]">
+          <span
+            className={cn(
+              "label-caps shrink-0 rounded-[2px] px-1.5 py-0.5 text-[9px]",
+              isTotal
+                ? "bg-white/20 text-white"
+                : "border border-[var(--hairline)] text-[var(--on-surface-variant)]",
+            )}
+          >
             {tag}
           </span>
         ) : null}
@@ -63,11 +81,13 @@ function LedgerRow({
       <span
         className={cn(
           "tabular shrink-0 text-right",
-          isSubtotal
-            ? "text-[14px] font-semibold text-[var(--text)]"
-            : isSub
-              ? "text-[13px] text-[var(--text-muted)]"
-              : "text-[13.5px] text-[var(--text)]",
+          isTotal
+            ? "text-[15px] font-bold"
+            : isSubtotal
+              ? "text-[14px] font-semibold"
+              : isSub
+                ? "text-[13px] text-[var(--on-surface-variant)]"
+                : "text-[13.5px] text-[var(--on-surface)]",
         )}
       >
         {formatMXN(value)}
@@ -91,12 +111,17 @@ export function BreakdownLedger({
       <CardHeader>
         <CardTitle>Desglose de la operación</CardTitle>
       </CardHeader>
-      <CardBody>
-        <div className="flex flex-col divide-y divide-[var(--border)]">
-          <LedgerRow label="Costo de la piedra" value={result.stoneMxn} />
+      <CardBody className="px-3">
+        <div className="flex flex-col divide-y divide-[var(--hairline)]">
+          <LedgerRow
+            label="Costo de la piedra"
+            value={result.stoneMxn}
+            marker="var(--on-surface)"
+          />
           <LedgerRow
             label="Flete + seguro internacional"
             value={result.composition.logistica}
+            marker="var(--chart-blue)"
           />
           <LedgerRow
             label="Valor en aduana"
@@ -123,12 +148,16 @@ export function BreakdownLedger({
             />
           ) : null}
           {interna ? (
-            <LedgerRow label={marginLabel} value={result.marginAmt} />
+            <LedgerRow
+              label={marginLabel}
+              value={result.marginAmt}
+              marker="var(--chart-orange)"
+            />
           ) : null}
           <LedgerRow
             label="Precio de venta"
             value={result.price}
-            variant="subtotal"
+            variant="total"
           />
           <LedgerRow
             label="IVA trasladado (16%)"

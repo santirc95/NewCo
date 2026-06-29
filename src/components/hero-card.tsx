@@ -1,56 +1,83 @@
 "use client";
 
-import { formatMXN } from "@/lib/compute";
+import { formatMXN, type QuoteResult } from "@/lib/compute";
 
 interface HeroCardProps {
-  /** Precio all-in al joyero (con IVA). */
-  allin: number;
-  /** Precio sin IVA. */
-  price: number;
+  result: QuoteResult;
+  /** Etiqueta del 4º segmento (cambia con la vista Interna/Cliente). */
+  servicioLabel: string;
 }
 
+/** Segmentos de la barra embebida en el hero (paleta categórica sobre oscuro). */
+const HERO_SEGMENTS: {
+  key: keyof QuoteResult["composition"];
+  color: string;
+}[] = [
+  { key: "piedra", color: "#ffffff" },
+  { key: "logistica", color: "var(--chart-blue)" },
+  { key: "aduana", color: "var(--chart-lavender)" },
+  { key: "servicio", color: "var(--chart-orange)" },
+];
+
 /**
- * Número héroe: única tarjeta con gradiente protagonista (oro champán / ámbar
- * profundo sobre carbón). La audacia visual vive aquí.
+ * Número héroe: única superficie oscura (mesh ámbar tipo diamante refractivo)
+ * sobre el papel claro. Lleva la barra de distribución de costos, como Stitch.
  */
-export function HeroCard({ allin, price }: HeroCardProps) {
+export function HeroCard({ result, servicioLabel }: HeroCardProps) {
   return (
-    <div
-      className="hero-card print-card relative overflow-hidden rounded-2xl border border-[rgba(230,201,138,0.22)] p-7"
-      style={{
-        background:
-          "radial-gradient(130% 150% at 12% 8%, rgba(230,201,138,0.20), transparent 52%), linear-gradient(135deg, #2b1e0b 0%, #1d1408 46%, #110c06 100%)",
-        boxShadow:
-          "0 1px 0 0 rgba(230,201,138,0.18) inset, 0 30px 60px -30px rgba(0,0,0,0.85), 0 0 80px -40px rgba(230,201,138,0.4)",
-      }}
-    >
-      {/* brillo superior sutil */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-24 right-0 h-48 w-72 opacity-60"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgba(240,217,163,0.25), transparent)",
-        }}
-      />
-      <div className="relative">
-        <div className="text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
-          Precio all-in al joyero
-        </div>
-        <div className="tabular mt-3 text-[clamp(2.4rem,6vw,3.6rem)] font-semibold leading-none text-[#fbf1da]">
-          {formatMXN(allin)}
-        </div>
-        <div className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[13px] text-[rgba(251,241,218,0.72)]">
-          <span>
-            Sin IVA:{" "}
-            <span className="tabular text-[rgba(251,241,218,0.92)]">
-              {formatMXN(price)}
+    <div className="hero-card grain relative overflow-hidden rounded-xl shadow-xl">
+      <div className="gradient-mesh absolute inset-0 opacity-90" aria-hidden />
+      <div className="relative flex h-full flex-col justify-between gap-8 p-8 text-white">
+        <div>
+          <span className="label-caps text-[11px] text-white/80">
+            Precio all-in al joyero
+          </span>
+          <div className="tabular mt-3 text-[clamp(2.4rem,6vw,3.4rem)] font-semibold leading-none text-white">
+            {formatMXN(result.allin)}
+          </div>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[13px] text-white/70">
+            <span>
+              Sin IVA:{" "}
+              <span className="tabular text-white/90">
+                {formatMXN(result.price)}
+              </span>
             </span>
+            <span aria-hidden className="text-white/40">
+              ·
+            </span>
+            <span>el IVA se acredita</span>
+          </div>
+        </div>
+
+        <div>
+          <span className="label-caps text-[10px] text-white/60">
+            Composición del costo
           </span>
-          <span aria-hidden className="text-[rgba(251,241,218,0.4)]">
-            ·
-          </span>
-          <span>el IVA se acredita</span>
+          <div
+            className="mt-2 flex h-4 w-full overflow-hidden rounded-full bg-white/15"
+            role="img"
+            aria-label="Distribución del costo por componente"
+          >
+            {HERO_SEGMENTS.map((seg, i) => {
+              const pct = result.compositionPct[seg.key];
+              const label =
+                seg.key === "servicio" ? servicioLabel : undefined;
+              return (
+                <div
+                  key={seg.key}
+                  className="h-full transition-[flex-grow] duration-1000"
+                  style={{
+                    flexGrow: Math.max(pct, 0),
+                    flexBasis: 0,
+                    minWidth: pct > 0 ? 3 : 0,
+                    background: seg.color,
+                    opacity: 1 - i * 0.08,
+                  }}
+                  title={`${label ?? seg.key}: ${(pct * 100).toFixed(1)}%`}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

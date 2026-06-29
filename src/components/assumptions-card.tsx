@@ -83,7 +83,7 @@ export function AssumptionsCard({ raw, update }: AssumptionsCardProps) {
           label="Arancel (IGI)"
           htmlFor="igi"
           hint={
-            <p className="rounded-lg border border-[rgba(245,166,35,0.25)] bg-[rgba(245,166,35,0.07)] px-3 py-2 text-[11.5px] leading-snug text-[var(--amber-flag)]">
+            <p className="mt-1 rounded-[2px] border-l-2 border-[var(--warn-border)] bg-[var(--warn-bg)] px-2.5 py-1.5 text-[11px] leading-snug text-[var(--warn-text)]">
               Confirmar con agente aduanal — el diamante pulido (7102.39) suele
               ser bajo o 0%, pero verificar contra el decreto vigente.
             </p>
