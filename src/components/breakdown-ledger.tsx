@@ -107,7 +107,7 @@ export function BreakdownLedger({
 }: BreakdownLedgerProps) {
   const interna = view === "interna";
   return (
-    <Card>
+    <Card className="card-surface card-lift" data-animate="card">
       <CardHeader>
         <CardTitle>Desglose de la operación</CardTitle>
       </CardHeader>
@@ -116,24 +116,35 @@ export function BreakdownLedger({
           <LedgerRow
             label="Costo de la piedra"
             value={result.stoneMxn}
-            marker="var(--on-surface)"
+            marker="var(--c-stone)"
           />
           <LedgerRow
             label="Flete + seguro internacional"
             value={result.composition.logistica}
-            marker="var(--chart-blue)"
+            marker="var(--c-logi)"
           />
           <LedgerRow
             label="Valor en aduana"
             value={result.aduana}
             variant="subtotal"
           />
-          <LedgerRow label="Arancel (IGI)" value={result.igiAmt} variant="sub" />
-          <LedgerRow label="DTA" value={result.dtaAmt} variant="sub" />
+          <LedgerRow
+            label="Arancel (IGI)"
+            value={result.igiAmt}
+            variant="sub"
+            marker="var(--c-aduana)"
+          />
+          <LedgerRow
+            label="DTA"
+            value={result.dtaAmt}
+            variant="sub"
+            marker="var(--c-aduana)"
+          />
           <LedgerRow
             label="Honorarios agente aduanal"
             value={result.agenteAmt}
             variant="sub"
+            marker="var(--c-aduana)"
           />
           <LedgerRow
             label="Costo aterrizado"
@@ -151,7 +162,7 @@ export function BreakdownLedger({
             <LedgerRow
               label={marginLabel}
               value={result.marginAmt}
-              marker="var(--chart-orange)"
+              marker="var(--c-servicio)"
             />
           ) : null}
           <LedgerRow

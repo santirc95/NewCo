@@ -2,6 +2,7 @@
 
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
 import { formatMXN, formatPct, type QuoteResult } from "@/lib/compute";
+import { AnimatedNumber } from "@/components/animated-number";
 
 interface CompositionBarProps {
   result: QuoteResult;
@@ -17,29 +18,25 @@ interface SegmentDef {
 
 /**
  * Barra de composición — segmentos proporcionales sobre el precio (sin IVA),
- * con la paleta categórica de Stitch (onyx / azul / lavanda / naranja).
+ * con la paleta curada (espresso / teal / ciruela / champán).
  */
 export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
   const segments: SegmentDef[] = [
-    { key: "piedra", label: "Piedra", color: "var(--on-surface)" },
-    {
-      key: "logistica",
-      label: "Logística + seguro",
-      color: "var(--chart-blue)",
-    },
-    { key: "aduana", label: "Aduana", color: "var(--chart-lavender)" },
-    { key: "servicio", label: servicioLabel, color: "var(--chart-orange)" },
+    { key: "piedra", label: "Piedra", color: "var(--c-stone)" },
+    { key: "logistica", label: "Logística + seguro", color: "var(--c-logi)" },
+    { key: "aduana", label: "Aduana", color: "var(--c-aduana)" },
+    { key: "servicio", label: servicioLabel, color: "var(--c-servicio)" },
   ];
 
   return (
-    <Card>
+    <Card className="card-surface card-lift" data-animate="card">
       <CardHeader>
         <CardTitle>Composición del precio · sin IVA</CardTitle>
       </CardHeader>
       <CardBody>
         {/* Barra */}
         <div
-          className="grain relative flex h-4 w-full overflow-hidden rounded-full bg-[var(--surface-high)]"
+          className="grain relative flex h-4 w-full overflow-hidden rounded-full bg-[var(--surface-high)] ring-1 ring-[var(--hairline)]"
           role="img"
           aria-label="Distribución del precio por componente"
         >
@@ -67,15 +64,18 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
             <li key={seg.key} className="flex items-center gap-2.5">
               <span
                 aria-hidden
-                className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
                 style={{ background: seg.color }}
               />
               <span className="flex-1 truncate text-[13px] text-[var(--on-surface-variant)]">
                 {seg.label}
               </span>
-              <span className="tabular text-[13px] font-medium text-[var(--on-surface)]">
-                {formatPct(result.compositionPct[seg.key])}
-              </span>
+              <AnimatedNumber
+                value={result.compositionPct[seg.key]}
+                format={formatPct}
+                duration={0.5}
+                className="tabular text-[13px] font-medium text-[var(--on-surface)]"
+              />
               <span className="tabular hidden w-28 text-right text-[12px] text-[var(--outline)] sm:inline">
                 {formatMXN(result.composition[seg.key])}
               </span>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
 import {
   computeQuote,
   DEFAULT_INPUTS,
@@ -52,6 +54,7 @@ function toInputs(raw: RawInputs): QuoteInputs {
 export function Simulator() {
   const [raw, setRaw] = useState<RawInputs>(DEFAULT_RAW);
   const [view, setView] = useState<View>("interna");
+  const scope = useRef<HTMLDivElement>(null);
 
   const update = useCallback((key: keyof RawInputs, value: string) => {
     setRaw((prev) => ({ ...prev, [key]: value }));
@@ -62,13 +65,55 @@ export function Simulator() {
   const marginLabel =
     view === "interna" ? "Margen NewCo" : "Servicio de importación NewCo";
 
+  // Entrada escalonada (una sola vez al montar): header, identidad y tarjetas.
+  useGSAP(
+    () => {
+      const root = scope.current;
+      if (!root) return;
+      const reduce = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      if (reduce) return;
+
+      const heads = root.querySelectorAll('[data-animate="head"]');
+      const cards = root.querySelectorAll('[data-animate="card"]');
+
+      if (heads.length) {
+        gsap.from(heads, {
+          opacity: 0,
+          y: 8,
+          duration: 0.5,
+          ease: "power2.out",
+        });
+      }
+      if (cards.length) {
+        gsap.from(cards, {
+          opacity: 0,
+          y: 14,
+          duration: 0.6,
+          ease: "power3.out",
+          stagger: 0.08,
+          delay: 0.1,
+          clearProps: "transform",
+        });
+      }
+    },
+    { scope, dependencies: [] },
+  );
+
   return (
-    <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+    <div
+      ref={scope}
+      className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10"
+    >
       {/* Encabezado */}
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header
+        data-animate="head"
+        className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div className="flex items-center gap-3">
           <div
-            className="grid h-10 w-10 place-items-center rounded-[3px] bg-[var(--primary)] text-[15px] font-bold text-[var(--on-primary)]"
+            className="grid h-10 w-10 place-items-center rounded-[5px] bg-[var(--primary)] text-[15px] font-bold text-[var(--on-primary)] ring-1 ring-inset ring-[var(--gold)]/30 shadow-[0_4px_14px_-6px_rgba(26,21,16,0.6)]"
             aria-hidden
           >
             N
@@ -101,7 +146,10 @@ export function Simulator() {
       </header>
 
       {/* Identidad de la cotización */}
-      <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--hairline)] pb-5">
+      <div
+        data-animate="head"
+        className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--hairline)] pb-5"
+      >
         <span className="text-[15px] font-semibold text-[var(--on-surface)]">
           {raw.stoneDesc || "—"}
         </span>

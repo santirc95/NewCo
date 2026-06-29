@@ -2,6 +2,7 @@
 
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
 import { formatMXN } from "@/lib/compute";
+import { AnimatedNumber } from "@/components/animated-number";
 
 interface WorkingCapitalProps {
   /** Anticipo mínimo para cubrir el desembolso. */
@@ -14,7 +15,7 @@ interface WorkingCapitalProps {
  */
 export function WorkingCapitalCard({ float }: WorkingCapitalProps) {
   return (
-    <Card>
+    <Card className="card-surface card-lift" data-animate="card">
       <CardHeader>
         <CardTitle>Capital de trabajo: cero</CardTitle>
       </CardHeader>
@@ -30,9 +31,11 @@ export function WorkingCapitalCard({ float }: WorkingCapitalProps) {
             <br />
             para el desembolso
           </span>
-          <span className="tabular text-[22px] font-semibold text-[var(--on-surface)]">
-            {formatMXN(float)}
-          </span>
+          <AnimatedNumber
+            value={float}
+            format={formatMXN}
+            className="tabular text-[22px] font-semibold text-[var(--on-surface)]"
+          />
         </div>
       </CardBody>
     </Card>

@@ -1,41 +1,61 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   NewCo — piel visual "Precision Ledger" (Stitch).
-   Technical Luxury / Terminal-Brutalism: "Onyx & Paper", hairline borders,
-   cifras monoespaciadas, hero oscuro con mesh ámbar. Fondo claro tipo papel.
+   NewCo — "Precision Ledger" refinada · Warm Onyx & Champagne.
+   Technical Luxury: papel marfil cálido, tinta onyx tibia, hero champán,
+   y una paleta de datos curada (espresso / teal / ciruela / champán).
+   La audacia vive en el hero; el resto, silencioso y armónico.
 --------------------------------------------------------------------------- */
 
 :root {
-  /* Superficies — grises papel, de fondo a contenedor */
-  --bg: #f8f9fa;
-  --surface: #ffffff;
-  --surface-low: #f3f4f5;
-  --surface-container: #edeeef;
-  --surface-high: #e7e8e9;
-  --surface-highest: #e1e3e4;
+  /* Superficies — marfil cálido, de fondo a contenedor */
+  --bg: #f7f4ee;
+  --surface: #fffefb;
+  --surface-low: #f1ece3;
+  --surface-container: #ece5da;
+  --surface-high: #e5ddcf;
+  --surface-highest: #ddd4c4;
 
-  /* Texto / tinta */
-  --on-surface: #191c1d;
-  --on-surface-variant: #4c4546;
-  --outline: #7e7576;
-  --outline-variant: #cfc4c5;
-  --hairline: rgba(126, 117, 118, 0.3);
+  /* Tinta / texto — onyx y taupe cálidos */
+  --on-surface: #1c1814;
+  --on-surface-variant: #6a6056;
+  --outline: #8a7f72;
+  --outline-variant: #d6ccbd;
+  --hairline: rgba(120, 105, 84, 0.2);
+  --hairline-strong: rgba(120, 105, 84, 0.34);
 
-  /* Onyx & accent */
-  --primary: #000000;
-  --on-primary: #ffffff;
-  --secondary: #a23e25; /* óxido — estados críticos / marcadores */
+  /* Onyx estructural + acento champán */
+  --primary: #1a1510;
+  --on-primary: #fbf7f0;
+  --gold: #be9a5a; /* champán — acento de lujo, uso medido */
+  --gold-soft: #d8b878;
+  --secondary: #9e4427; /* terracota — sólo estados críticos */
 
-  /* Acentos categóricos para visualización de datos */
-  --chart-orange: #ff7a00;
-  --chart-lavender: #a8a5ff;
-  --chart-blue: #00a3ff;
+  /* Paleta categórica curada (sobre papel) */
+  --c-stone: #2a2420; /* espresso — Piedra */
+  --c-logi: #4e7488; /* teal apagado — Logística */
+  --c-aduana: #8e6e8c; /* ciruela apagado — Aduana */
+  --c-servicio: #c2954e; /* champán — Servicio/Margen */
 
-  /* Aviso (flag IGI) en ámbar, sobre claro */
-  --warn-bg: rgba(255, 122, 0, 0.08);
-  --warn-border: rgba(255, 122, 0, 0.35);
-  --warn-text: #9a4a00;
+  /* Paleta categórica para el hero (sobre oscuro) */
+  --h-stone: #f3ead8;
+  --h-logi: #86b3c4;
+  --h-aduana: #c8aecd;
+  --h-servicio: #e3b75f;
+
+  /* Aviso (flag IGI) en champán-ámbar */
+  --warn-bg: rgba(194, 149, 78, 0.1);
+  --warn-border: rgba(194, 149, 78, 0.45);
+  --warn-text: #8a6520;
+
+  /* Sombras cálidas, en capas */
+  --shadow-card: 0 1px 2px rgba(40, 30, 18, 0.04),
+    0 10px 28px -16px rgba(40, 30, 18, 0.16);
+  --shadow-card-hover: 0 2px 4px rgba(40, 30, 18, 0.06),
+    0 18px 40px -18px rgba(40, 30, 18, 0.24);
+  --shadow-hero: 0 1px 0 rgba(255, 240, 210, 0.08) inset,
+    0 26px 60px -24px rgba(30, 18, 6, 0.6),
+    0 0 90px -50px rgba(224, 169, 78, 0.5);
 }
 
 @theme inline {
@@ -51,10 +71,8 @@
   --color-outline-variant: var(--outline-variant);
   --color-primary: var(--primary);
   --color-on-primary: var(--on-primary);
+  --color-gold: var(--gold);
   --color-secondary: var(--secondary);
-  --color-chart-orange: var(--chart-orange);
-  --color-chart-lavender: var(--chart-lavender);
-  --color-chart-blue: var(--chart-blue);
   --font-sans: var(--font-hanken);
   --font-mono: var(--font-jetbrains);
 }
@@ -75,6 +93,19 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Textura tenue del papel + halo champán muy sutil — tacto de lujo */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background:
+    radial-gradient(1100px 600px at 88% -8%, rgba(194, 149, 78, 0.07), transparent 60%),
+    radial-gradient(800px 500px at 0% 100%, rgba(120, 105, 84, 0.04), transparent 60%);
+}
+
 /* Cifras tabulares — JetBrains Mono, feel de terminal financiera */
 .tabular {
   font-family: var(--font-jetbrains), ui-monospace, monospace;
@@ -90,29 +121,44 @@ body {
   letter-spacing: 0.1em;
 }
 
-/* Hero: mesh oscuro tipo "diamante refractivo" */
-.gradient-mesh {
-  background-color: #0a0a0a;
-  background-image:
-    radial-gradient(at 0% 0%, #1a1a1a 0px, transparent 70%),
-    radial-gradient(at 100% 0%, #ff9500 0px, transparent 70%),
-    radial-gradient(at 50% 100%, #4a3b2a 0px, transparent 100%);
+/* Tarjeta con elevación cálida + lift en hover.
+   La transición NO incluye `transform`: GSAP es dueño del transform en la
+   entrada y un `transition: transform` aquí pelearía con él. El lift en hover
+   se logra con sombra + borde, sin desplazamiento. */
+.card-surface {
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease;
+}
+.card-lift:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--hairline-strong);
 }
 
-/* Grano sutil (textura "stardust") generado con feTurbulence, sin red externa */
+/* Hero: mesh champán tipo "diamante refractivo" */
+.gradient-mesh {
+  background-color: #100b07;
+  background-image:
+    radial-gradient(at 0% 0%, #241a12 0px, transparent 60%),
+    radial-gradient(at 100% 0%, #e0a94e 0px, transparent 66%),
+    radial-gradient(at 50% 120%, #5a3f22 0px, transparent 100%);
+}
+
+/* Grano sutil (textura "stardust") con feTurbulence, sin red externa */
 .grain::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.08;
+  opacity: 0.07;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Foco de teclado visible */
+/* Foco de teclado visible (champán sobre onyx) */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
@@ -130,38 +176,34 @@ body {
 
 /* ---------------------------------------------------------------------------
    Print stylesheet — Export PDF v1 (window.print()).
-   Desacoplado: en v2 se reemplaza por render server-side con folio.
 --------------------------------------------------------------------------- */
 @media print {
   body {
     background: #ffffff !important;
   }
-
+  body::before {
+    display: none !important;
+  }
   .no-print {
     display: none !important;
   }
-
   .print-full {
     grid-column: 1 / -1 !important;
     width: 100% !important;
   }
-
   .print-card {
     border: 1px solid #d8d8d8 !important;
     box-shadow: none !important;
+    transform: none !important;
     break-inside: avoid;
   }
-
-  /* En impresión el hero pasa a tinta legible sobre crema */
   .gradient-mesh {
     background: #fbf6ea !important;
   }
-
   .hero-card,
   .hero-card * {
     color: #1a1205 !important;
   }
-
   @page {
     margin: 16mm;
   }

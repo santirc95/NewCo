@@ -21,7 +21,7 @@ interface AssumptionsCardProps {
  */
 export function AssumptionsCard({ raw, update }: AssumptionsCardProps) {
   return (
-    <Card>
+    <Card className="card-surface" data-animate="card">
       <CardHeader>
         <CardTitle>Supuestos</CardTitle>
       </CardHeader>
