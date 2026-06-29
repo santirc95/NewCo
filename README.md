@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NewCo · Simulador de costo aterrizado
 
-## Getting Started
+Simulador del costo aterrizado y precio de venta para la **importación B2B de
+diamante en México**. Versión 1 **standalone**: sin backend ni Airtable; todos
+los supuestos se editan a mano y el desglose se recalcula en vivo.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS v4
+- Componentes estilo shadcn (primitivos en `src/components/ui/`)
+- Estado sólo en memoria (sin `localStorage`/`sessionStorage`)
+- Listo para desplegar en Vercel
+
+## Desarrollo
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
+npm run build    # build de producción
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Cómo funciona
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Supuestos** (tarjeta izquierda): campos editables. El campo *Arancel (IGI)*
+  trae una nota en ámbar para confirmar con el agente aduanal (el diamante
+  pulido 7102.39 suele ser bajo o 0%; verificar contra el decreto vigente).
+- **Número héroe**: precio all-in al joyero (con IVA). El IVA es **acreditable**,
+  no es un pasivo.
+- **Barra de composición**: proporción del precio (sin IVA) entre Piedra,
+  Logística + seguro, Aduana y Servicio/Margen NewCo.
+- **Desglose**: ledger vertical con subtotales (Valor en aduana, Costo
+  aterrizado, Precio de venta).
+- **Toggle Interna / Cliente**:
+  - *Interna*: muestra la línea de margen, el IVA de importación y la tarjeta de
+    capital de trabajo.
+  - *Cliente*: oculta esas tres y renombra el margen a "Servicio de importación
+    NewCo".
+- **Export PDF**: usa `window.print()` con un print-stylesheet limpio.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Fórmulas
 
-## Learn More
+Toda la lógica vive en `src/lib/compute.ts` como la función **pura**
+`computeQuote(inputs)`, separada de la UI:
 
-To learn more about Next.js, take a look at the following resources:
+```
+stoneMxn  = stoneUsd * fx
+aduana    = stoneMxn + logi                     // Valor en aduana
+igiAmt    = aduana * (igi / 100)
+dtaAmt    = aduana * (dta / 100)
+landed    = aduana + igiAmt + dtaAmt + agente   // Costo aterrizado
+ivaImp    = (aduana + igiAmt + dtaAmt) * 0.16   // IVA importación (acreditable)
+marginAmt = landed * (margin / 100)
+price     = landed + marginAmt                  // Precio de venta (sin IVA)
+ivaOut    = price * 0.16                         // IVA trasladado (acreditable)
+allin     = price + ivaOut                       // Precio all-in al joyero
+float     = landed + ivaImp                      // Anticipo mínimo (capital de trabajo)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Arquitectura para v2
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+El contrato `QuoteInputs` y la función pura `computeQuote()` están aislados de la
+UI a propósito. En v2:
 
-## Deploy on Vercel
+- Los supuestos llegarán desde **Airtable** (tablas Clientes / Ventas /
+  Invoices) en lugar de editarse a mano — la tarjeta de Supuestos pasa a sólo
+  lectura, alimentando los mismos `QuoteInputs`.
+- El **PDF** se generará server-side con un **folio inmutable** (snapshot
+  congelado de la cotización). El botón actual (`window.print()`) está
+  desacoplado para sustituirlo sin tocar la lógica de negocio.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Notas de modelo
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- El IVA (importación y trasladado) es **acreditable**, no es pasivo fiscal.
+- Modelo **contra orden confirmada**: inventario cero, sin días en inventario ni
+  costo de capital propio (el anticipo del joyero cubre el desembolso).
