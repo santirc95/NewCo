@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { formatMXN } from "@/lib/compute";
-import { stoneAllIn } from "@/lib/pricing";
+import { PRICING_ASSUMPTIONS, stoneAllIn } from "@/lib/pricing";
 import {
   getMockStones,
   SHAPES,
@@ -18,6 +17,12 @@ import type { JewelerBranding, Stone } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 
 type Multi = Set<string>;
+
+// El inventario del joyero se cotiza en USD (estándar de la industria). El
+// precio all-in (MXN) se expresa en USD al tipo de cambio de los supuestos.
+const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
+const formatUSD = (n: number) => `$${usdFmt.format(Math.round(n))} USD`;
+const toUsd = (mxn: number) => mxn / PRICING_ASSUMPTIONS.fx;
 
 function Chip({
   active,
@@ -52,9 +57,10 @@ function toggle(set: Multi, value: string): Multi {
 
 export function InventoryBrowser() {
   const stones = useMemo(() => getMockStones(), []);
-  const allIn = useMemo(() => {
+  // Precio all-in expresado en USD (estándar de la industria del diamante).
+  const allInUsd = useMemo(() => {
     const m = new Map<string, number>();
-    stones.forEach((s) => m.set(s.id, stoneAllIn(s)));
+    stones.forEach((s) => m.set(s.id, toUsd(stoneAllIn(s))));
     return m;
   }, [stones]);
 
@@ -102,9 +108,9 @@ export function InventoryBrowser() {
         clarityMatch(d.clarity) &&
         (cut.size === 0 || cut.has(d.cut)) &&
         (lab.size === 0 || lab.has(d.lab)) &&
-        (allIn.get(d.id) ?? 0) <= pMax,
+        (allInUsd.get(d.id) ?? 0) <= pMax,
     );
-  }, [stones, allIn, shape, type, color, clarity, cut, lab, ctMin, ctMax, priceMax]);
+  }, [stones, allInUsd, shape, type, color, clarity, cut, lab, ctMin, ctMax, priceMax]);
 
   const clearAll = () => {
     setShape(new Set());
@@ -275,7 +281,7 @@ export function InventoryBrowser() {
             </div>
           </FilterSection>
 
-          <FilterSection title="Precio máx (MXN)">
+          <FilterSection title="Precio máx (USD)">
             <RangeInput value={priceMax} onChange={setPriceMax} placeholder="sin límite" wide />
           </FilterSection>
 
@@ -319,7 +325,7 @@ export function InventoryBrowser() {
                 <StoneCard
                   key={d.id}
                   stone={d}
-                  allIn={allIn.get(d.id) ?? 0}
+                  priceUsd={allInUsd.get(d.id) ?? 0}
                   selected={selected.has(d.id)}
                   onToggle={() => setSelected(toggle(selected, d.id))}
                 />
@@ -430,12 +436,12 @@ function RangeInput({
 
 function StoneCard({
   stone,
-  allIn,
+  priceUsd,
   selected,
   onToggle,
 }: {
   stone: Stone;
-  allIn: number;
+  priceUsd: number;
   selected: boolean;
   onToggle: () => void;
 }) {
@@ -481,7 +487,7 @@ function StoneCard({
           Precio all-in
         </span>
         <span className="tabular text-[14px] font-semibold text-[var(--on-surface)]">
-          {formatMXN(allIn)}
+          {formatUSD(priceUsd)}
         </span>
       </div>
       <button
