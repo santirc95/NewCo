@@ -18,6 +18,7 @@ function Row({
   value,
   format = formatMXN,
   emphasis,
+  strong,
   muted,
   chip,
 }: {
@@ -25,23 +26,30 @@ function Row({
   value: number;
   format?: (n: number) => string;
   emphasis?: boolean;
+  strong?: boolean;
   muted?: boolean;
   chip?: string;
 }) {
+  const labelClass = emphasis
+    ? "text-[14px] font-semibold text-[var(--on-surface)]"
+    : strong
+      ? "text-[13.5px] font-medium text-[var(--on-surface)]"
+      : muted
+        ? "text-[13.5px] text-[var(--on-surface-variant)]"
+        : "text-[13.5px] text-[var(--on-surface)]";
+
+  const valueClass = emphasis
+    ? "tabular text-[18px] font-bold text-[var(--warn-text)]"
+    : strong
+      ? "tabular text-[14px] font-semibold text-[var(--on-surface)]"
+      : muted
+        ? "tabular text-[13.5px] text-[var(--on-surface-variant)]"
+        : "tabular text-[13.5px] text-[var(--on-surface)]";
+
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-2">
-        <span
-          className={
-            emphasis
-              ? "text-[14px] font-semibold text-[var(--on-surface)]"
-              : muted
-                ? "text-[13.5px] text-[var(--on-surface-variant)]"
-                : "text-[13.5px] text-[var(--on-surface)]"
-          }
-        >
-          {label}
-        </span>
+        <span className={labelClass}>{label}</span>
         {chip ? (
           <span className="label-caps rounded-[2px] bg-[var(--warn-bg)] px-1.5 py-0.5 text-[9px] text-[var(--warn-text)]">
             {chip}
@@ -52,13 +60,7 @@ function Row({
         value={value}
         format={format}
         duration={0.5}
-        className={
-          emphasis
-            ? "tabular text-[18px] font-bold text-[var(--warn-text)]"
-            : muted
-              ? "tabular text-[13.5px] text-[var(--on-surface-variant)]"
-              : "tabular text-[13.5px] text-[var(--on-surface)]"
-        }
+        className={valueClass}
       />
     </div>
   );
@@ -90,16 +92,16 @@ export function IvaExplainer({ allin, ivaOut, price }: IvaExplainerProps) {
         </div>
 
         <div className="mt-4 flex flex-col gap-3">
-          <Row label="Pagas (con IVA)" value={allin} />
+          <Row label="Tu costo real (sin IVA)" value={price} strong />
           <Row
             label="IVA que acreditas (16%)"
             value={ivaOut}
-            format={(n) => `−${formatMXN(n)}`}
+            format={(n) => `+${formatMXN(n)}`}
             chip="lo recuperas"
             muted
           />
           <div className="border-t border-[var(--hairline)]" />
-          <Row label="Tu costo real (sin IVA)" value={price} emphasis />
+          <Row label="Precio con IVA · lo que pagas" value={allin} emphasis />
         </div>
 
         <p className="mt-4 text-[12.5px] leading-relaxed text-[var(--on-surface-variant)]">
