@@ -31,17 +31,17 @@
   --gold-soft: #d8b878;
   --secondary: #9e4427; /* terracota — sólo estados críticos */
 
-  /* Paleta categórica curada (sobre papel) */
-  --c-stone: #2a2420; /* espresso — Piedra */
-  --c-logi: #4e7488; /* teal apagado — Logística */
-  --c-aduana: #8e6e8c; /* ciruela apagado — Aduana */
-  --c-servicio: #c2954e; /* champán — Servicio/Margen */
+  /* Paleta categórica — metales preciosos cálidos (sobre papel) */
+  --c-stone: #231c15; /* onyx — Piedra */
+  --c-logi: #8b8474; /* peltre — Logística */
+  --c-aduana: #b5826c; /* cobre rosado — Aduana */
+  --c-servicio: #c79a4c; /* champán — Servicio/Margen */
 
-  /* Paleta categórica para el hero (sobre oscuro) */
-  --h-stone: #f3ead8;
-  --h-logi: #86b3c4;
-  --h-aduana: #c8aecd;
-  --h-servicio: #e3b75f;
+  /* Paleta categórica para el hero (sobre oscuro) — versiones luminosas */
+  --h-stone: #f2e7d2; /* marfil cálido */
+  --h-logi: #cbc3af; /* peltre claro */
+  --h-aduana: #dcab89; /* cobre claro */
+  --h-servicio: #e8bd62; /* champán */
 
   /* Aviso (flag IGI) en champán-ámbar */
   --warn-bg: rgba(194, 149, 78, 0.1);
