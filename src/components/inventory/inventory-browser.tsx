@@ -272,7 +272,10 @@ export function InventoryBrowser() {
               </div>
               <div className="text-[13px] text-[var(--on-surface-variant)]">
                 <b className="text-[var(--on-surface)]">{selected.size}</b> de {MAX_SELECT}{" "}
-                {selected.size === 1 ? "piedra" : "piedras"} para la propuesta
+                {selected.size === 1 ? "piedra seleccionada" : "piedras seleccionadas"}
+                <span className="ml-1.5 hidden text-[var(--outline)] sm:inline">
+                  · simúlalas juntas o arma la propuesta
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -280,7 +283,7 @@ export function InventoryBrowser() {
                 href={simulatorHref([...selected])}
                 className="label-caps rounded-[6px] border border-[var(--gold)] px-3.5 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
               >
-                Simular orden
+                Simular orden ({selected.size})
               </Link>
               <button
                 type="button"
