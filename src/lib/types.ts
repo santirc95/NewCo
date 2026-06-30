@@ -15,6 +15,82 @@ export type Shape =
   | "Princesa"
   | "Marquesa";
 
+/** Roles del sistema. Permisos validados en el servidor. */
+export type Role = "jeweler" | "admin";
+
+/** Perfil del joyero. Parte editable por él; parte administrada por NewCo. */
+export interface Jeweler {
+  id: string;
+  // Editable por el JOYERO:
+  name: string;
+  legalName: string;
+  rfc: string;
+  address: string;
+  contactEmail: string;
+  contactPhone: string;
+  branding?: { logoText: string }; // white-label = Cap.2
+  // Administrado por NEWCO (el joyero NO lo edita):
+  active: boolean;
+  createdAt: string;
+}
+
+/** Banda de margen GLOBAL por valor de piedra (USD). Administrada por NewCo. */
+export interface MarginBand {
+  id: string;
+  minValueUsd: number;
+  maxValueUsd: number | null; // null = sin tope superior
+  marginPct: number;
+}
+
+/** Parámetros de operación de NewCo (globales). SIN margen, SIN precio de piedra. */
+export interface OpParams {
+  fx: number;
+  logiMxn: number;
+  igiPct: number;
+  dtaPct: number;
+  agenteMxn: number;
+}
+
+/** Entrada de una línea de cotización (piedra + su margen ya resuelto). */
+export interface QuoteLineInput {
+  stoneId: string;
+  supplierPriceUsd: number;
+  marginPct: number;
+}
+
+/** Cálculo por piedra dentro de una orden. */
+export interface LineQuote {
+  stoneId: string;
+  stoneMxn: number;
+  logiShare: number;
+  aduana: number;
+  igiAmt: number;
+  dtaAmt: number;
+  agenteShare: number;
+  landed: number;
+  marginPct: number;
+  marginAmt: number;
+  price: number;
+}
+
+/** Cotización de una orden (1+ piedras). */
+export interface Quote {
+  lines: LineQuote[];
+  landedTotal: number;
+  marginAmt: number;
+  price: number;
+  ivaImp: number;
+  ivaOut: number;
+  allin: number;
+  float: number;
+  composition: {
+    stone: number;
+    logistics: number;
+    customs: number;
+    service: number;
+  };
+}
+
 export type DiamondType = "natural" | "lab";
 export type Lab = "GIA" | "IGI";
 /** Corte: Excelente / Muy buena / Buena. */
