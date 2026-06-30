@@ -1,37 +1,19 @@
-import { computeQuote, type QuoteInputs, type QuoteResult } from "./compute";
+import { quoteStones, DEFAULT_OP, DEFAULT_BANDS } from "./quote";
 import type { Stone } from "./types";
 
 /**
- * Supuestos de importación por defecto para precios de catálogo.
- * Una sola fuente de verdad: el precio all-in del inventario y de la propuesta
- * sale de la misma `computeQuote` pura que el simulador.
+ * Precio de catálogo de una piedra (standalone, N=1) con la misma `computeQuote`
+ * y política de bandas que el simulador. Una sola fuente de verdad.
  *
- * // TODO v2: estos supuestos vendrán por joyero/operación desde Airtable.
+ * // TODO Cap.2: pasar OpParams/bandas del joyero/operación en vez de defaults.
  */
-export const PRICING_ASSUMPTIONS = {
-  fx: 18.5,
-  logi: 3500,
-  igi: 0,
-  dta: 0.8,
-  agente: 6500,
-  margin: 12,
-} as const;
 
-/** Cotización completa de una piedra a partir del costo del proveedor. */
-export function stoneQuote(
-  stone: Stone,
-  assumptions = PRICING_ASSUMPTIONS,
-): QuoteResult {
-  const inputs: QuoteInputs = {
-    stoneDesc: `${stone.shape} ${stone.carat.toFixed(2)} ct`,
-    stoneCert: stone.certNumber,
-    stoneUsd: stone.supplierPriceUsd,
-    ...assumptions,
-  };
-  return computeQuote(inputs);
+/** Precio all-in (MXN, con IVA) de una piedra. */
+export function stoneAllIn(stone: Stone): number {
+  return quoteStones([stone], DEFAULT_OP, null, DEFAULT_BANDS).allin;
 }
 
-/** Precio all-in al joyero (con IVA) de una piedra. */
-export function stoneAllIn(stone: Stone): number {
-  return stoneQuote(stone).allin;
+/** Precio all-in en USD (estándar de la industria del diamante). */
+export function stoneAllInUsd(stone: Stone): number {
+  return stoneAllIn(stone) / DEFAULT_OP.fx;
 }

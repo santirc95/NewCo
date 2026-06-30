@@ -4,89 +4,89 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
+import { formatMXN } from "@/lib/compute";
 import {
   computeQuote,
-  DEFAULT_INPUTS,
-  type QuoteInputs,
-} from "@/lib/compute";
-import { Button } from "@/components/ui/primitives";
-import { AssumptionsCard } from "@/components/assumptions-card";
+  lineFromStone,
+  DEFAULT_OP,
+  DEFAULT_BANDS,
+} from "@/lib/quote";
+import { getMockStone, getMockStones } from "@/lib/inventory";
+import type { OpParams, Stone } from "@/lib/types";
+import { Button, Card, CardBody } from "@/components/ui/primitives";
+import { OperationCard, type RawOp } from "@/components/op-card";
 import { HeroCard } from "@/components/hero-card";
 import { CompositionBar } from "@/components/composition-bar";
 import { BreakdownLedger } from "@/components/breakdown-ledger";
 import { IvaExplainer } from "@/components/iva-explainer";
 
-/** Etiqueta única del servicio de NewCo (vista única del joyero). */
 const SERVICE_LABEL = "Servicio de importación NewCo";
 
-/**
- * Estado crudo de los inputs como strings. Mantener strings evita que el campo
- * pelee con el usuario al escribir decimales o vaciar el valor; los números se
- * derivan al vuelo para `computeQuote`.
- */
-export type RawInputs = Record<keyof QuoteInputs, string>;
-
-const DEFAULT_RAW: RawInputs = {
-  stoneDesc: DEFAULT_INPUTS.stoneDesc,
-  stoneCert: DEFAULT_INPUTS.stoneCert,
-  stoneUsd: String(DEFAULT_INPUTS.stoneUsd),
-  fx: String(DEFAULT_INPUTS.fx),
-  logi: String(DEFAULT_INPUTS.logi),
-  igi: String(DEFAULT_INPUTS.igi),
-  dta: String(DEFAULT_INPUTS.dta),
-  agente: String(DEFAULT_INPUTS.agente),
-  margin: String(DEFAULT_INPUTS.margin),
+const DEFAULT_RAW_OP: RawOp = {
+  fx: String(DEFAULT_OP.fx),
+  logiMxn: String(DEFAULT_OP.logiMxn),
+  igiPct: String(DEFAULT_OP.igiPct),
+  dtaPct: String(DEFAULT_OP.dtaPct),
+  agenteMxn: String(DEFAULT_OP.agenteMxn),
 };
 
-function toInputs(raw: RawInputs): QuoteInputs {
+function toOp(raw: RawOp): OpParams {
   return {
-    stoneDesc: raw.stoneDesc,
-    stoneCert: raw.stoneCert,
-    stoneUsd: parseFloat(raw.stoneUsd),
     fx: parseFloat(raw.fx),
-    logi: parseFloat(raw.logi),
-    igi: parseFloat(raw.igi),
-    dta: parseFloat(raw.dta),
-    agente: parseFloat(raw.agente),
-    margin: parseFloat(raw.margin),
+    logiMxn: parseFloat(raw.logiMxn),
+    igiPct: parseFloat(raw.igiPct),
+    dtaPct: parseFloat(raw.dtaPct),
+    agenteMxn: parseFloat(raw.agenteMxn),
   };
 }
 
 export function Simulator() {
-  const [raw, setRaw] = useState<RawInputs>(DEFAULT_RAW);
+  const [rawOp, setRawOp] = useState<RawOp>(DEFAULT_RAW_OP);
+  // Por defecto una piedra (la primera del inventario); el handoff la reemplaza.
+  const [stones, setStones] = useState<Stone[]>(() => [getMockStones()[0]]);
   const scope = useRef<HTMLDivElement>(null);
 
-  const update = useCallback((key: keyof RawInputs, value: string) => {
-    setRaw((prev) => ({ ...prev, [key]: value }));
+  const updateOp = useCallback((key: keyof OpParams, value: string) => {
+    setRawOp((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  // Handoff desde el inventario: ?stoneUsd=&cert=&desc= siembra la piedra.
+  // Handoff desde inventario/propuestas: ?stones=ID1,ID2,...
   useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    const patch: Partial<RawInputs> = {};
-    const usd = sp.get("stoneUsd");
-    const cert = sp.get("cert");
-    const desc = sp.get("desc");
-    if (usd) patch.stoneUsd = usd;
-    if (cert) patch.stoneCert = cert;
-    if (desc) patch.stoneDesc = desc;
-    if (Object.keys(patch).length) setRaw((prev) => ({ ...prev, ...patch }));
+    const ids = new URLSearchParams(window.location.search).get("stones");
+    if (!ids) return;
+    const resolved = ids
+      .split(",")
+      .map((id) => getMockStone(id.trim()))
+      .filter((s): s is Stone => Boolean(s))
+      .slice(0, 4);
+    if (resolved.length) setStones(resolved);
   }, []);
 
-  const result = useMemo(() => computeQuote(toInputs(raw)), [raw]);
+  const op = useMemo(() => toOp(rawOp), [rawOp]);
+  const lines = useMemo(
+    () => stones.map((s) => lineFromStone(s, null, DEFAULT_BANDS)),
+    [stones],
+  );
+  const quote = useMemo(() => computeQuote(lines, op), [lines, op]);
+
+  const savings = useMemo(() => {
+    if (stones.length < 2) return 0;
+    const standalone = stones.reduce(
+      (s, st) =>
+        s + computeQuote([lineFromStone(st, null, DEFAULT_BANDS)], op).allin,
+      0,
+    );
+    return standalone - quote.allin;
+  }, [stones, op, quote.allin]);
 
   useGSAP(
     () => {
       const root = scope.current;
       if (!root) return;
-      const reduce = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduce || document.hidden) return;
-
       const heads = root.querySelectorAll('[data-animate="head"]');
       const cards = root.querySelectorAll('[data-animate="card"]');
-
       if (heads.length) {
         gsap.from(heads, { opacity: 0, y: 8, duration: 0.5, ease: "power2.out" });
       }
@@ -105,12 +105,18 @@ export function Simulator() {
     { scope, dependencies: [] },
   );
 
+  const multi = stones.length > 1;
+  const identity = multi
+    ? `Orden · ${stones.length} piedras`
+    : stones[0]
+      ? `${stones[0].carat.toFixed(2)} ct · ${stones[0].shape}`
+      : "—";
+
   return (
     <div
       ref={scope}
       className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10"
     >
-      {/* Encabezado */}
       <header
         data-animate="head"
         className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -131,7 +137,6 @@ export function Simulator() {
             </p>
           </div>
         </div>
-
         <div className="no-print flex items-center gap-4">
           <Link
             href="/inventario"
@@ -146,37 +151,50 @@ export function Simulator() {
         </div>
       </header>
 
-      {/* Identidad de la cotización */}
       <div
         data-animate="head"
         className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--hairline)] pb-5"
       >
         <span className="text-[15px] font-semibold text-[var(--on-surface)]">
-          {raw.stoneDesc || "—"}
+          {identity}
         </span>
-        {raw.stoneCert ? (
+        {!multi && stones[0] ? (
           <span className="tabular rounded-[2px] border border-[var(--hairline)] bg-[var(--surface-low)] px-2.5 py-1 text-[11.5px] text-[var(--on-surface-variant)]">
-            {raw.stoneCert}
+            {stones[0].certNumber}
           </span>
         ) : null}
       </div>
 
-      {/* Cuerpo: supuestos a la izquierda, resultados a la derecha */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="no-print lg:col-span-5 xl:col-span-4">
           <div className="lg:sticky lg:top-8">
-            <AssumptionsCard raw={raw} update={update} />
+            <OperationCard
+              rawOp={rawOp}
+              update={updateOp}
+              stones={stones}
+              lines={quote.lines}
+            />
           </div>
         </div>
 
         <div className="flex flex-col gap-6 lg:col-span-7 xl:col-span-8 print-full">
-          <HeroCard result={result} servicioLabel={SERVICE_LABEL} />
-          <CompositionBar result={result} servicioLabel={SERVICE_LABEL} />
-          <BreakdownLedger result={result} marginLabel={SERVICE_LABEL} />
+          <HeroCard
+            allin={quote.allin}
+            price={quote.price}
+            composition={quote.composition}
+            servicioLabel={SERVICE_LABEL}
+          />
+          <CompositionBar
+            composition={quote.composition}
+            price={quote.price}
+            servicioLabel={SERVICE_LABEL}
+          />
+          <BreakdownLedger quote={quote} stones={stones} marginLabel={SERVICE_LABEL} />
+          {multi ? <SavingsCard savings={savings} /> : null}
           <IvaExplainer
-            allin={result.allin}
-            ivaOut={result.ivaOut}
-            price={result.price}
+            allin={quote.allin}
+            ivaOut={quote.ivaOut}
+            price={quote.price}
           />
         </div>
       </div>
@@ -185,6 +203,35 @@ export function Simulator() {
         Etapa 1 · NewCo importador de registro · IVA acreditable, no es pasivo
       </footer>
     </div>
+  );
+}
+
+function SavingsCard({ savings }: { savings: number }) {
+  return (
+    <Card className="card-surface card-lift overflow-hidden" data-animate="card">
+      <div
+        aria-hidden
+        className="h-[3px] w-full"
+        style={{
+          background:
+            "linear-gradient(90deg, var(--gold), var(--gold-soft) 40%, transparent)",
+        }}
+      />
+      <CardBody className="flex items-center justify-between gap-4 pt-5">
+        <div>
+          <h3 className="label-caps text-[11px] text-[var(--warn-text)]">
+            Ahorro por consolidar
+          </h3>
+          <p className="mt-1.5 max-w-[320px] text-[12.5px] leading-relaxed text-[var(--on-surface-variant)]">
+            Importar las piezas en una sola orden paga el flete y el agente
+            aduanal una vez, no por cada diamante.
+          </p>
+        </div>
+        <span className="tabular shrink-0 text-[22px] font-bold text-[var(--warn-text)]">
+          {formatMXN(savings)}
+        </span>
+      </CardBody>
+    </Card>
   );
 }
 

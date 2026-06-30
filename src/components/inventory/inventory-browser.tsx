@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { PRICING_ASSUMPTIONS, stoneAllIn } from "@/lib/pricing";
+import { stoneAllInUsd } from "@/lib/pricing";
 import {
   getMockStones,
   getMockStone,
@@ -28,7 +28,6 @@ const MAX_SELECT = 4;
 // Inventario en USD (estándar de la industria del diamante).
 const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
 const formatUSD = (n: number) => `$${usdFmt.format(Math.round(n))} USD`;
-const toUsd = (mxn: number) => mxn / PRICING_ASSUMPTIONS.fx;
 
 function toggle(set: Multi, value: string): Multi {
   const next = new Set(set);
@@ -37,18 +36,17 @@ function toggle(set: Multi, value: string): Multi {
   return next;
 }
 
-function simulatorHref(stone: Stone): string {
-  const desc = `${stone.shape} ${stone.carat.toFixed(2)} ct`;
-  return `/?stoneUsd=${stone.supplierPriceUsd}&cert=${encodeURIComponent(
-    stone.certNumber,
-  )}&desc=${encodeURIComponent(desc)}`;
+/** Handoff al simulador: una o varias piedras por id. */
+function simulatorHref(stoneIds: string | string[]): string {
+  const ids = Array.isArray(stoneIds) ? stoneIds.join(",") : stoneIds;
+  return `/?stones=${encodeURIComponent(ids)}`;
 }
 
 export function InventoryBrowser() {
   const stones = useMemo(() => getMockStones(), []);
   const allInUsd = useMemo(() => {
     const m = new Map<string, number>();
-    stones.forEach((s) => m.set(s.id, toUsd(stoneAllIn(s))));
+    stones.forEach((s) => m.set(s.id, stoneAllInUsd(s)));
     return m;
   }, [stones]);
 
@@ -277,13 +275,21 @@ export function InventoryBrowser() {
                 {selected.size === 1 ? "piedra" : "piedras"} para la propuesta
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setGenOpen(true)}
-              className="label-caps inline-flex items-center gap-2 rounded-[6px] bg-[var(--primary)] px-4 py-2.5 text-[11px] text-[var(--on-primary)] transition-opacity hover:opacity-90"
-            >
-              Armar propuesta →
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href={simulatorHref([...selected])}
+                className="label-caps rounded-[6px] border border-[var(--gold)] px-3.5 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
+              >
+                Simular orden
+              </Link>
+              <button
+                type="button"
+                onClick={() => setGenOpen(true)}
+                className="label-caps inline-flex items-center gap-2 rounded-[6px] bg-[var(--primary)] px-4 py-2.5 text-[11px] text-[var(--on-primary)] transition-opacity hover:opacity-90"
+              >
+                Armar propuesta →
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -474,20 +480,28 @@ function StoneCard({
           {formatUSD(priceUsd)}
         </span>
       </div>
-      <button
-        type="button"
-        onClick={onToggle}
-        disabled={disabled}
-        className={`rounded-[8px] py-2 text-[12.5px] font-medium transition-all ${
-          selected
-            ? "bg-[var(--primary)] text-[var(--on-primary)]"
-            : disabled
-              ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
-              : "border border-[var(--hairline)] bg-[var(--surface-low)] text-[var(--on-surface)] hover:border-[var(--gold)]"
-        }`}
-      >
-        {selected ? "✓ En propuesta" : disabled ? "Máx 4" : "Agregar a propuesta"}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={disabled}
+          className={`rounded-[8px] py-2 text-[12.5px] font-medium transition-all ${
+            selected
+              ? "bg-[var(--primary)] text-[var(--on-primary)]"
+              : disabled
+                ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+                : "border border-[var(--hairline)] bg-[var(--surface-low)] text-[var(--on-surface)] hover:border-[var(--gold)]"
+          }`}
+        >
+          {selected ? "✓ En propuesta" : disabled ? "Máx 4" : "Agregar a propuesta"}
+        </button>
+        <Link
+          href={simulatorHref(stone.id)}
+          className="rounded-[8px] border border-[var(--gold)] py-2 text-center text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
+        >
+          Simular importación
+        </Link>
+      </div>
     </div>
   );
 }
@@ -791,7 +805,7 @@ function ProposalRow({
             </span>
             {signaled ? (
               <Link
-                href={simulatorHref(signaled)}
+                href={simulatorHref(signaled.id)}
                 className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
               >
                 Abrir en simulador →

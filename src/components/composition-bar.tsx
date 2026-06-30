@@ -1,31 +1,34 @@
 "use client";
 
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
-import { formatMXN, formatPct, type QuoteResult } from "@/lib/compute";
+import { formatMXN, formatPct } from "@/lib/compute";
+import type { Quote } from "@/lib/types";
 import { AnimatedNumber } from "@/components/animated-number";
 
 interface CompositionBarProps {
-  result: QuoteResult;
-  /** Etiqueta del 4º segmento (cambia con la vista Interna/Cliente). */
+  composition: Quote["composition"];
+  price: number;
+  /** Etiqueta del 4º segmento (servicio NewCo). */
   servicioLabel: string;
 }
 
 interface SegmentDef {
-  key: keyof QuoteResult["composition"];
+  key: keyof Quote["composition"];
   label: string;
   color: string;
 }
 
 /**
  * Barra de composición — segmentos proporcionales sobre el precio (sin IVA),
- * con la paleta curada (espresso / teal / ciruela / champán).
+ * en la paleta de metales preciosos.
  */
-export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
+export function CompositionBar({ composition, price, servicioLabel }: CompositionBarProps) {
+  const denom = price > 0 ? price : 1;
   const segments: SegmentDef[] = [
-    { key: "piedra", label: "Piedra", color: "var(--c-stone)" },
-    { key: "logistica", label: "Logística + seguro", color: "var(--c-logi)" },
-    { key: "aduana", label: "Aduana", color: "var(--c-aduana)" },
-    { key: "servicio", label: servicioLabel, color: "var(--c-servicio)" },
+    { key: "stone", label: "Piedra", color: "var(--c-stone)" },
+    { key: "logistics", label: "Logística + seguro", color: "var(--c-logi)" },
+    { key: "customs", label: "Aduana", color: "var(--c-aduana)" },
+    { key: "service", label: servicioLabel, color: "var(--c-servicio)" },
   ];
 
   return (
@@ -34,14 +37,13 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
         <CardTitle>Composición del precio · sin IVA</CardTitle>
       </CardHeader>
       <CardBody>
-        {/* Barra */}
         <div
           className="grain relative flex h-4 w-full overflow-hidden rounded-full bg-[var(--surface-high)] ring-1 ring-[var(--hairline)]"
           role="img"
           aria-label="Distribución del precio por componente"
         >
           {segments.map((seg) => {
-            const pct = result.compositionPct[seg.key];
+            const pct = composition[seg.key] / denom;
             return (
               <div
                 key={seg.key}
@@ -58,7 +60,6 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
           })}
         </div>
 
-        {/* Leyenda */}
         <ul className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
           {segments.map((seg) => (
             <li key={seg.key} className="flex items-center gap-2.5">
@@ -71,13 +72,13 @@ export function CompositionBar({ result, servicioLabel }: CompositionBarProps) {
                 {seg.label}
               </span>
               <AnimatedNumber
-                value={result.compositionPct[seg.key]}
+                value={composition[seg.key] / denom}
                 format={formatPct}
                 duration={0.5}
                 className="tabular text-[13px] font-medium text-[var(--on-surface)]"
               />
               <span className="tabular hidden w-28 text-right text-[12px] text-[var(--outline)] sm:inline">
-                {formatMXN(result.composition[seg.key])}
+                {formatMXN(composition[seg.key])}
               </span>
             </li>
           ))}

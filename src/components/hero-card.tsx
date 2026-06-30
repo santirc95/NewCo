@@ -1,30 +1,33 @@
 "use client";
 
-import { formatMXN, type QuoteResult } from "@/lib/compute";
+import { formatMXN } from "@/lib/compute";
+import type { Quote } from "@/lib/types";
 import { AnimatedNumber } from "@/components/animated-number";
 
 interface HeroCardProps {
-  result: QuoteResult;
-  /** Etiqueta del 4º segmento (cambia con la vista Interna/Cliente). */
+  allin: number;
+  price: number;
+  composition: Quote["composition"];
+  /** Etiqueta del 4º segmento (servicio NewCo). */
   servicioLabel: string;
 }
 
-/** Segmentos de la barra embebida en el hero (paleta cálida sobre oscuro). */
 const HERO_SEGMENTS: {
-  key: keyof QuoteResult["composition"];
+  key: keyof Quote["composition"];
   color: string;
 }[] = [
-  { key: "piedra", color: "var(--h-stone)" },
-  { key: "logistica", color: "var(--h-logi)" },
-  { key: "aduana", color: "var(--h-aduana)" },
-  { key: "servicio", color: "var(--h-servicio)" },
+  { key: "stone", color: "var(--h-stone)" },
+  { key: "logistics", color: "var(--h-logi)" },
+  { key: "customs", color: "var(--h-aduana)" },
+  { key: "service", color: "var(--h-servicio)" },
 ];
 
 /**
- * Número héroe: única superficie oscura (mesh champán tipo diamante refractivo)
- * sobre el papel marfil. Lleva la barra de distribución de costos, como Stitch.
+ * Número héroe: única superficie oscura (mesh champán) sobre el papel marfil.
+ * Hero = lo que el joyero paga a NewCo (all-in con IVA).
  */
-export function HeroCard({ result, servicioLabel }: HeroCardProps) {
+export function HeroCard({ allin, price, composition, servicioLabel }: HeroCardProps) {
+  const denom = price > 0 ? price : 1;
   return (
     <div
       className="hero-card grain relative overflow-hidden rounded-xl"
@@ -38,7 +41,7 @@ export function HeroCard({ result, servicioLabel }: HeroCardProps) {
             Precio all-in al joyero
           </span>
           <AnimatedNumber
-            value={result.allin}
+            value={allin}
             format={formatMXN}
             className="tabular mt-3 block text-[clamp(2.4rem,6vw,3.4rem)] font-bold leading-none tracking-[-0.02em] text-white"
           />
@@ -46,7 +49,7 @@ export function HeroCard({ result, servicioLabel }: HeroCardProps) {
             <span className="flex items-baseline gap-1">
               Sin IVA:{" "}
               <AnimatedNumber
-                value={result.price}
+                value={price}
                 format={formatMXN}
                 className="tabular text-white/90"
               />
@@ -68,8 +71,8 @@ export function HeroCard({ result, servicioLabel }: HeroCardProps) {
             aria-label="Distribución del costo por componente"
           >
             {HERO_SEGMENTS.map((seg) => {
-              const pct = result.compositionPct[seg.key];
-              const label = seg.key === "servicio" ? servicioLabel : seg.key;
+              const pct = composition[seg.key] / denom;
+              const label = seg.key === "service" ? servicioLabel : seg.key;
               return (
                 <div
                   key={seg.key}

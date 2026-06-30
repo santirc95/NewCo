@@ -2,10 +2,12 @@
 
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
-import { formatMXN, type QuoteResult } from "@/lib/compute";
+import { formatMXN } from "@/lib/compute";
+import type { Quote, Stone } from "@/lib/types";
 
 interface BreakdownLedgerProps {
-  result: QuoteResult;
+  quote: Quote;
+  stones: Stone[];
   /** Etiqueta de la línea de servicio NewCo. */
   marginLabel: string;
 }
@@ -25,7 +27,7 @@ function LedgerRow({
   tag?: string;
   marker?: string;
 }) {
-  const isTotal = variant === "total"; // fila negra (firma terminal-brutalista)
+  const isTotal = variant === "total";
   const isSubtotal = variant === "subtotal";
   const isSub = variant === "sub";
   return (
@@ -95,70 +97,78 @@ function LedgerRow({
 }
 
 /**
- * Desglose de la operación — ledger vertical (vista única del joyero).
- * Muestra el servicio de NewCo y construye hasta el precio con IVA.
+ * Desglose de la operación. Totales de la orden; si hay varias piedras, además
+ * el desglose por piedra (landed + servicio de cada una).
  */
-export function BreakdownLedger({ result, marginLabel }: BreakdownLedgerProps) {
+export function BreakdownLedger({ quote, stones, marginLabel }: BreakdownLedgerProps) {
+  const byId = new Map(stones.map((s) => [s.id, s]));
+  const sum = (f: (l: Quote["lines"][number]) => number) =>
+    quote.lines.reduce((s, l) => s + f(l), 0);
+
+  const aduanaTotal = sum((l) => l.aduana);
+  const igiTotal = sum((l) => l.igiAmt);
+  const dtaTotal = sum((l) => l.dtaAmt);
+  const agenteTotal = sum((l) => l.agenteShare);
+  const multi = quote.lines.length > 1;
+
   return (
     <Card className="card-surface card-lift" data-animate="card">
       <CardHeader>
         <CardTitle>Desglose de la operación</CardTitle>
       </CardHeader>
       <CardBody className="px-3">
+        {/* Desglose por piedra (solo multi-piedra) */}
+        {multi ? (
+          <div className="mb-4 flex flex-col gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface-low)] p-3">
+            <div className="label-caps px-1 text-[9px] text-[var(--outline)]">
+              Por piedra
+            </div>
+            {quote.lines.map((l) => {
+              const s = byId.get(l.stoneId);
+              return (
+                <div
+                  key={l.stoneId}
+                  className="flex items-center justify-between gap-3 px-1"
+                >
+                  <span className="tabular min-w-0 truncate text-[12.5px] text-[var(--on-surface)]">
+                    {s ? `${s.carat.toFixed(2)} ct · ${s.shape}` : l.stoneId}
+                    <span className="ml-1.5 text-[var(--outline)]">
+                      ({l.marginPct}% servicio)
+                    </span>
+                  </span>
+                  <span className="tabular shrink-0 text-[12.5px] font-medium text-[var(--on-surface)]">
+                    {formatMXN(l.price)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
         <div className="flex flex-col divide-y divide-[var(--hairline)]">
           <LedgerRow
             label="Costo de la piedra"
-            value={result.stoneMxn}
+            value={quote.composition.stone}
             marker="var(--c-stone)"
           />
           <LedgerRow
             label="Flete + seguro internacional"
-            value={result.composition.logistica}
+            value={quote.composition.logistics}
             marker="var(--c-logi)"
           />
-          <LedgerRow
-            label="Valor en aduana"
-            value={result.aduana}
-            variant="subtotal"
-          />
-          <LedgerRow
-            label="Arancel (IGI)"
-            value={result.igiAmt}
-            variant="sub"
-            marker="var(--c-aduana)"
-          />
-          <LedgerRow
-            label="DTA"
-            value={result.dtaAmt}
-            variant="sub"
-            marker="var(--c-aduana)"
-          />
+          <LedgerRow label="Valor en aduana" value={aduanaTotal} variant="subtotal" />
+          <LedgerRow label="Arancel (IGI)" value={igiTotal} variant="sub" marker="var(--c-aduana)" />
+          <LedgerRow label="DTA" value={dtaTotal} variant="sub" marker="var(--c-aduana)" />
           <LedgerRow
             label="Honorarios agente aduanal"
-            value={result.agenteAmt}
+            value={agenteTotal}
             variant="sub"
             marker="var(--c-aduana)"
           />
-          <LedgerRow
-            label="Costo aterrizado"
-            value={result.landed}
-            variant="subtotal"
-          />
-          <LedgerRow
-            label={marginLabel}
-            value={result.marginAmt}
-            marker="var(--c-servicio)"
-          />
-          <LedgerRow
-            label="Precio de venta (sin IVA)"
-            value={result.price}
-            variant="total"
-          />
-          <LedgerRow
-            label="IVA trasladado (16%)"
-            value={result.ivaOut}
-            tag="acreditable"
-          />
+          <LedgerRow label="Costo aterrizado" value={quote.landedTotal} variant="subtotal" />
+          <LedgerRow label={marginLabel} value={quote.marginAmt} marker="var(--c-servicio)" />
+          <LedgerRow label="Precio de venta (sin IVA)" value={quote.price} variant="total" />
+          <LedgerRow label="IVA trasladado (16%)" value={quote.ivaOut} tag="acreditable" />
         </div>
       </CardBody>
     </Card>
