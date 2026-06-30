@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import {
@@ -8,16 +9,15 @@ import {
   DEFAULT_INPUTS,
   type QuoteInputs,
 } from "@/lib/compute";
-import { Button, Segmented } from "@/components/ui/primitives";
+import { Button } from "@/components/ui/primitives";
 import { AssumptionsCard } from "@/components/assumptions-card";
 import { HeroCard } from "@/components/hero-card";
 import { CompositionBar } from "@/components/composition-bar";
 import { BreakdownLedger } from "@/components/breakdown-ledger";
 import { IvaExplainer } from "@/components/iva-explainer";
-import { WorkingCapitalCard } from "@/components/working-capital";
 
-/** Vista del simulador: interna (todo) o cliente (cifras de cara al joyero). */
-export type View = "interna" | "cliente";
+/** Etiqueta única del servicio de NewCo (vista única del joyero). */
+const SERVICE_LABEL = "Servicio de importación NewCo";
 
 /**
  * Estado crudo de los inputs como strings. Mantener strings evita que el campo
@@ -54,19 +54,27 @@ function toInputs(raw: RawInputs): QuoteInputs {
 
 export function Simulator() {
   const [raw, setRaw] = useState<RawInputs>(DEFAULT_RAW);
-  const [view, setView] = useState<View>("interna");
   const scope = useRef<HTMLDivElement>(null);
 
   const update = useCallback((key: keyof RawInputs, value: string) => {
     setRaw((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // Handoff desde el inventario: ?stoneUsd=&cert=&desc= siembra la piedra.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const patch: Partial<RawInputs> = {};
+    const usd = sp.get("stoneUsd");
+    const cert = sp.get("cert");
+    const desc = sp.get("desc");
+    if (usd) patch.stoneUsd = usd;
+    if (cert) patch.stoneCert = cert;
+    if (desc) patch.stoneDesc = desc;
+    if (Object.keys(patch).length) setRaw((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   const result = useMemo(() => computeQuote(toInputs(raw)), [raw]);
 
-  const marginLabel =
-    view === "interna" ? "Margen NewCo" : "Servicio de importación NewCo";
-
-  // Entrada escalonada (una sola vez al montar): header, identidad y tarjetas.
   useGSAP(
     () => {
       const root = scope.current;
@@ -74,21 +82,13 @@ export function Simulator() {
       const reduce = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
-      // Sin entrada animada si se rechaza el movimiento o la pestaña está
-      // oculta (rAF no dispara; las tarjetas quedarían congeladas a media
-      // opacidad). En esos casos se muestran en su estado final.
       if (reduce || document.hidden) return;
 
       const heads = root.querySelectorAll('[data-animate="head"]');
       const cards = root.querySelectorAll('[data-animate="card"]');
 
       if (heads.length) {
-        gsap.from(heads, {
-          opacity: 0,
-          y: 8,
-          duration: 0.5,
-          ease: "power2.out",
-        });
+        gsap.from(heads, { opacity: 0, y: 8, duration: 0.5, ease: "power2.out" });
       }
       if (cards.length) {
         gsap.from(cards, {
@@ -127,21 +127,18 @@ export function Simulator() {
               NewCo
             </h1>
             <p className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-              Simulador de costo aterrizado · diamante B2B
+              Simulador de adquisición · lo que pagas a NewCo
             </p>
           </div>
         </div>
 
-        <div className="no-print flex items-center gap-5">
-          <Segmented<View>
-            ariaLabel="Cambiar vista"
-            value={view}
-            onChange={setView}
-            options={[
-              { value: "interna", label: "Interna" },
-              { value: "cliente", label: "Cliente" },
-            ]}
-          />
+        <div className="no-print flex items-center gap-4">
+          <Link
+            href="/inventario"
+            className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+          >
+            ← Inventario
+          </Link>
           <Button variant="solid" onClick={() => window.print()}>
             <PrintIcon />
             Export PDF
@@ -173,23 +170,19 @@ export function Simulator() {
         </div>
 
         <div className="flex flex-col gap-6 lg:col-span-7 xl:col-span-8 print-full">
-          <HeroCard result={result} servicioLabel={marginLabel} />
-          <CompositionBar result={result} servicioLabel={marginLabel} />
-          <BreakdownLedger result={result} view={view} marginLabel={marginLabel} />
+          <HeroCard result={result} servicioLabel={SERVICE_LABEL} />
+          <CompositionBar result={result} servicioLabel={SERVICE_LABEL} />
+          <BreakdownLedger result={result} marginLabel={SERVICE_LABEL} />
           <IvaExplainer
             allin={result.allin}
             ivaOut={result.ivaOut}
             price={result.price}
           />
-          {view === "interna" ? (
-            <WorkingCapitalCard float={result.float} />
-          ) : null}
         </div>
       </div>
 
       <footer className="no-print mt-10 label-caps text-center text-[9px] text-[var(--outline)]">
-        v1 standalone · supuestos editables a mano · IVA acreditable, no es
-        pasivo
+        Etapa 1 · NewCo importador de registro · IVA acreditable, no es pasivo
       </footer>
     </div>
   );

@@ -1,7 +1,9 @@
 /**
- * Modelo de datos compartido entre superficies (inventario y propuesta).
- * En v1 los datos vienen de mocks; los tipos son el contrato estable para
- * conectar la API real del proveedor y el store de propuestas en v2.
+ * Modelo de datos — Etapa 1.
+ *
+ * NewCo es el PRINCIPAL: le vende el diamante importado al joyero. El cliente
+ * final solo ve y señala (capa de presentación, sin precio ni pago).
+ * Los tipos son el contrato estable; en Cap.2 se conectan API/Airtable reales.
  */
 
 export type Shape =
@@ -24,54 +26,55 @@ export interface Stone {
   certNumber: string;
   shape: Shape;
   carat: number;
-  color: string; // D, E, F, ...
-  clarity: string; // FL, IF, VVS1, VVS2, VS1, VS2, SI1...
+  color: string;
+  clarity: string;
   cut: Cut;
   lab: Lab;
   type: DiamondType;
-  /** Costo del proveedor en USD — alimenta computeQuote para el precio all-in. */
+  /** Costo del proveedor en USD — alimenta computeQuote. */
   supplierPriceUsd: number;
   /** La API real trae foto/video; en mock queda undefined. */
   photoUrl?: string;
-  /** Ventana de hold que concede el proveedor (ej. 48h). */
+  /** Ventana de hold del proveedor (dato real tras negociación). */
   holdWindowHours: number;
 }
 
-/** Marca editable del joyero (white-label). */
-export interface JewelerBranding {
-  /** Inicial o monograma para el sello. */
-  logoText: string;
-  name: string;
-  tagline: string;
-  address: string;
-  advisorName: string;
-}
+/** enviada → señalada → en_hold → pagada → ordenada. */
+export type ProposalStatus =
+  | "enviada"
+  | "señalada"
+  | "en_hold"
+  | "pagada"
+  | "ordenada";
 
-export interface Jeweler {
+/** Propuesta que el joyero arma y comparte con su cliente final. */
+export interface Proposal {
   id: string;
-  name: string;
-  branding: JewelerBranding;
-}
-
-/**
- * Carga útil de una propuesta. En v1 se codifica en el token del link público
- * (sin backend); en v2 será un registro con token opaco en el servidor.
- */
-export interface ProposalPayload {
-  /** Snapshot de la marca del joyero al momento de generar el link. */
-  jeweler: JewelerBranding;
-  clientName: string;
-  stoneIds: string[];
+  token: string; // link público impredecible
+  clientName: string; // lo captura el joyero
+  stoneIds: string[]; // 1–4 piedras curadas
+  signaledStoneId?: string; // la que el cliente final señaló
+  createdAt: string;
+  status: ProposalStatus;
 }
 
 export type HoldStatus = "active" | "released" | "expired" | "converted";
 
-/** Apartado de una piedra por el cliente final. */
+/** Apartado de una piedra — lo dispara el JOYERO. */
 export interface Hold {
+  id: string;
+  proposalId: string;
   stoneId: string;
-  customerPhone: string;
-  consent: boolean;
   startedAt: number; // epoch ms
-  expiresAt: number; // epoch ms — (expiresAt - startedAt) ≤ holdWindowHours
+  expiresAt: number; // epoch ms — (expiresAt - startedAt) ≤ stone.holdWindowHours
   status: HoldStatus;
+}
+
+/** Orden creada al confirmarse el pago del joyero a NewCo. */
+export interface Order {
+  id: string;
+  proposalId: string;
+  stoneId: string;
+  jewelerPaymentRef: string;
+  createdAt: string;
 }

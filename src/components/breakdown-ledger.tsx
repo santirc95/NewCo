@@ -3,12 +3,10 @@
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
 import { cn } from "@/lib/utils";
 import { formatMXN, type QuoteResult } from "@/lib/compute";
-import type { View } from "@/components/simulator";
 
 interface BreakdownLedgerProps {
   result: QuoteResult;
-  view: View;
-  /** Etiqueta de la línea de margen (cambia con la vista). */
+  /** Etiqueta de la línea de servicio NewCo. */
   marginLabel: string;
 }
 
@@ -97,15 +95,10 @@ function LedgerRow({
 }
 
 /**
- * Desglose de la operación — ledger vertical. Orden y sub-líneas según spec.
- * La vista Cliente oculta IVA importación y la línea de margen.
+ * Desglose de la operación — ledger vertical (vista única del joyero).
+ * Muestra el servicio de NewCo y construye hasta el precio con IVA.
  */
-export function BreakdownLedger({
-  result,
-  view,
-  marginLabel,
-}: BreakdownLedgerProps) {
-  const interna = view === "interna";
+export function BreakdownLedger({ result, marginLabel }: BreakdownLedgerProps) {
   return (
     <Card className="card-surface card-lift" data-animate="card">
       <CardHeader>
@@ -151,20 +144,11 @@ export function BreakdownLedger({
             value={result.landed}
             variant="subtotal"
           />
-          {interna ? (
-            <LedgerRow
-              label="IVA importación"
-              value={result.ivaImp}
-              tag="acreditable"
-            />
-          ) : null}
-          {interna ? (
-            <LedgerRow
-              label={marginLabel}
-              value={result.marginAmt}
-              marker="var(--c-servicio)"
-            />
-          ) : null}
+          <LedgerRow
+            label={marginLabel}
+            value={result.marginAmt}
+            marker="var(--c-servicio)"
+          />
           <LedgerRow
             label="Precio de venta (sin IVA)"
             value={result.price}
