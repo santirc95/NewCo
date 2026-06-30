@@ -166,7 +166,7 @@ export function BreakdownLedger({
             />
           ) : null}
           <LedgerRow
-            label="Precio de venta"
+            label="Precio de venta (sin IVA)"
             value={result.price}
             variant="total"
           />
