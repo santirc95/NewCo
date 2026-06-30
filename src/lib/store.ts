@@ -45,13 +45,14 @@ function orderOf(proposalId: string): Order | null {
 
 export const proposalStore = {
   /** El joyero arma la propuesta (1–4 piedras) y captura el nombre del cliente. */
-  create(clientName: string, stoneIds: string[]): Proposal {
+  create(clientName: string, stoneIds: string[], jewelerWhatsapp?: string): Proposal {
     const token = uid().replace(/-/g, "");
     const proposal: Proposal = {
       id: shortId("PRO"),
       token,
       clientName,
       stoneIds: stoneIds.slice(0, 4),
+      jewelerWhatsapp: jewelerWhatsapp || undefined,
       createdAt: new Date().toISOString(),
       status: "enviada",
     };

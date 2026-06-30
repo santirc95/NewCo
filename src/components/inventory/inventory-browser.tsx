@@ -502,13 +502,14 @@ function GenerateModal({
   onCreated: () => void;
 }) {
   const [clientName, setClientName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [url, setUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const generate = () => {
     startTransition(async () => {
-      const p = await createProposalAction(clientName, stoneIds);
+      const p = await createProposalAction(clientName, stoneIds, whatsapp);
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       setUrl(`${origin}/p/${p.token}`);
       onCreated();
@@ -556,6 +557,28 @@ function GenerateModal({
                 placeholder="Andrea"
                 className="w-full rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] px-3 py-2 text-[14px] text-[var(--on-surface)] outline-none placeholder:text-[var(--outline-variant)] focus:border-[var(--gold)]"
               />
+            </label>
+            <label className="mt-3 block">
+              <span className="label-caps mb-1.5 block text-[9px] text-[var(--outline)]">
+                Tu WhatsApp · para el aviso del cliente
+              </span>
+              <div className="flex items-center overflow-hidden rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] focus-within:border-[var(--gold)]">
+                <span className="border-r border-[var(--hairline)] px-3 py-2 text-[13px] text-[var(--on-surface-variant)]">
+                  🇲🇽 +52
+                </span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="55 0000 0000"
+                  className="tabular w-full bg-transparent px-3 py-2 text-[14px] text-[var(--on-surface)] outline-none placeholder:text-[var(--outline-variant)]"
+                />
+              </div>
+              <span className="mt-1 block text-[10.5px] text-[var(--outline)]">
+                Cuando tu cliente marque una pieza, te llega un WhatsApp con cuál
+                le gustó.
+              </span>
             </label>
             <button
               type="button"

@@ -8,6 +8,20 @@ import { signalInterestAction } from "@/app/actions";
 interface ProposalData {
   clientName: string;
   signaledStoneId?: string;
+  jewelerWhatsapp?: string;
+}
+
+/** Número a formato wa.me (con lada MX si vienen 10 dígitos). */
+function waNumber(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  return d.length === 10 ? `52${d}` : d;
+}
+
+function waMessage(clientName: string, s: Stone): string {
+  const quien = clientName ? `Soy ${clientName}. ` : "";
+  return `${quien}Me interesó este diamante de la selección que me enviaste: ${s.carat.toFixed(
+    2,
+  )} ct · ${s.shape} · color ${s.color} · ${s.clarity} · cert ${s.lab} (ref ${s.id}). ¿Podemos platicar?`;
 }
 
 /**
@@ -41,10 +55,18 @@ export function ProposalView({
     );
   }
 
-  const signal = (stoneId: string) => {
-    setSignaled(stoneId); // optimista
+  const signal = (stone: Stone) => {
+    setSignaled(stone.id); // optimista
+    // Aviso al joyero por WhatsApp (click-to-chat) — dentro del gesto del click
+    // para que el navegador no lo bloquee. // TODO Cap.2: push automático.
+    if (proposal.jewelerWhatsapp) {
+      const url = `https://wa.me/${waNumber(proposal.jewelerWhatsapp)}?text=${encodeURIComponent(
+        waMessage(proposal.clientName, stone),
+      )}`;
+      window.open(url, "_blank", "noopener");
+    }
     startTransition(async () => {
-      await signalInterestAction(token, stoneId);
+      await signalInterestAction(token, stone.id);
     });
   };
 
@@ -103,7 +125,7 @@ export function ProposalView({
 
               <button
                 type="button"
-                onClick={() => signal(s.id)}
+                onClick={() => signal(s)}
                 disabled={pending && isSignaled}
                 className={`mt-5 rounded-[10px] border-[1.5px] py-3 text-[13px] font-medium transition-all ${
                   isSignaled

@@ -11,8 +11,10 @@ import type { Proposal } from "@/lib/types";
 export async function createProposalAction(
   clientName: string,
   stoneIds: string[],
+  jewelerWhatsapp?: string,
 ): Promise<Proposal> {
-  return proposalStore.create(clientName.trim(), stoneIds);
+  const digits = (jewelerWhatsapp ?? "").replace(/\D/g, "");
+  return proposalStore.create(clientName.trim(), stoneIds, digits || undefined);
 }
 
 /** El cliente final señala interés → notifica al joyero (mock). */

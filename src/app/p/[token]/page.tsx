@@ -35,6 +35,7 @@ export default async function ProposalPage({
             ? {
                 clientName: proposal.clientName,
                 signaledStoneId: proposal.signaledStoneId,
+                jewelerWhatsapp: proposal.jewelerWhatsapp,
               }
             : null
         }

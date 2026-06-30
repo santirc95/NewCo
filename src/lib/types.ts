@@ -54,6 +54,8 @@ export interface Proposal {
   clientName: string; // lo captura el joyero
   stoneIds: string[]; // 1–4 piedras curadas
   signaledStoneId?: string; // la que el cliente final señaló
+  /** WhatsApp del joyero (dígitos) para el aviso click-to-chat del cliente. */
+  jewelerWhatsapp?: string;
   createdAt: string;
   status: ProposalStatus;
 }
