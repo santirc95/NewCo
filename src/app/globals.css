@@ -93,17 +93,40 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Textura tenue del papel + halo champán muy sutil — tacto de lujo */
+/* Fondo en capas — tacto de lujo, susurrante:
+   1) halos champán muy tenues
+   2) enrejado de rombos = líneas de Schreger del marfil ≈ facetas de diamante */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.5;
   background:
     radial-gradient(1100px 600px at 88% -8%, rgba(194, 149, 78, 0.07), transparent 60%),
-    radial-gradient(800px 500px at 0% 100%, rgba(120, 105, 84, 0.04), transparent 60%);
+    radial-gradient(800px 500px at 0% 100%, rgba(120, 105, 84, 0.04), transparent 60%),
+    repeating-linear-gradient(
+      60deg,
+      rgba(120, 105, 84, 0.035) 0 1px,
+      transparent 1px 26px
+    ),
+    repeating-linear-gradient(
+      -60deg,
+      rgba(120, 105, 84, 0.035) 0 1px,
+      transparent 1px 26px
+    );
+}
+
+/* Grano fino de marfil — feTurbulence, sin red externa; hundido en el papel */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='i'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23i)'/%3E%3C/svg%3E");
 }
 
 /* Cifras tabulares — JetBrains Mono, feel de terminal financiera */
@@ -181,7 +204,8 @@ body::before {
   body {
     background: #ffffff !important;
   }
-  body::before {
+  body::before,
+  body::after {
     display: none !important;
   }
   .no-print {

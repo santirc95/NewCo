@@ -73,7 +73,10 @@ export function Simulator() {
       const reduce = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
-      if (reduce) return;
+      // Sin entrada animada si se rechaza el movimiento o la pestaña está
+      // oculta (rAF no dispara; las tarjetas quedarían congeladas a media
+      // opacidad). En esos casos se muestran en su estado final.
+      if (reduce || document.hidden) return;
 
       const heads = root.querySelectorAll('[data-animate="head"]');
       const cards = root.querySelectorAll('[data-animate="card"]');

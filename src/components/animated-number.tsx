@@ -37,7 +37,10 @@ export function AnimatedNumber({
         "(prefers-reduced-motion: reduce)",
       ).matches;
 
-      if (reduce) {
+      // Sin animación si el usuario la rechaza o la pestaña está oculta (rAF
+      // no dispara estando oculta y GSAP se congelaría a media cuenta): en un
+      // simulador financiero el valor mostrado debe ser SIEMPRE el correcto.
+      if (reduce || document.hidden) {
         el.textContent = format(value);
         prev.current = value;
         return;
