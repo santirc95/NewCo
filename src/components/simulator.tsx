@@ -13,6 +13,7 @@ import { AssumptionsCard } from "@/components/assumptions-card";
 import { HeroCard } from "@/components/hero-card";
 import { CompositionBar } from "@/components/composition-bar";
 import { BreakdownLedger } from "@/components/breakdown-ledger";
+import { IvaExplainer } from "@/components/iva-explainer";
 import { WorkingCapitalCard } from "@/components/working-capital";
 
 /** Vista del simulador: interna (todo) o cliente (cifras de cara al joyero). */
@@ -175,6 +176,11 @@ export function Simulator() {
           <HeroCard result={result} servicioLabel={marginLabel} />
           <CompositionBar result={result} servicioLabel={marginLabel} />
           <BreakdownLedger result={result} view={view} marginLabel={marginLabel} />
+          <IvaExplainer
+            allin={result.allin}
+            ivaOut={result.ivaOut}
+            price={result.price}
+          />
           {view === "interna" ? (
             <WorkingCapitalCard float={result.float} />
           ) : null}
