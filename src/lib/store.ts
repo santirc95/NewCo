@@ -1,5 +1,6 @@
-import type { Proposal, Hold, Order } from "./types";
+import type { Proposal, Hold, Order, Jeweler, MarginBand } from "./types";
 import { getMockStone } from "./inventory";
+import { DEFAULT_BANDS } from "./quote";
 
 /**
  * Store de propuestas — Etapa 1: EN MEMORIA (un solo proceso).
@@ -14,12 +15,36 @@ interface DB {
   proposals: Map<string, Proposal>;
   holds: Hold[];
   orders: Order[];
+  jewelers: Map<string, Jeweler>;
+  bands: MarginBand[];
+}
+
+function seedJewelers(): Map<string, Jeweler> {
+  const m = new Map<string, Jeweler>();
+  m.set("jwl-vecchia", {
+    id: "jwl-vecchia",
+    name: "Vecchia Jewelry",
+    legalName: "Vecchia Joyeros, S.A. de C.V.",
+    rfc: "VJO950101AB1",
+    address: "Av. Presidente Masaryk, Polanco, CDMX",
+    contactEmail: "contacto@vecchia.mx",
+    contactPhone: "5512345678",
+    active: true,
+    createdAt: new Date().toISOString(),
+  });
+  return m;
 }
 
 const g = globalThis as unknown as { __newcoDb?: DB };
 const db: DB =
   g.__newcoDb ??
-  (g.__newcoDb = { proposals: new Map(), holds: [], orders: [] });
+  (g.__newcoDb = {
+    proposals: new Map(),
+    holds: [],
+    orders: [],
+    jewelers: seedJewelers(),
+    bands: DEFAULT_BANDS.map((b) => ({ ...b })),
+  });
 
 const uid = () => crypto.randomUUID();
 const shortId = (prefix: string) => `${prefix}-${uid().slice(0, 8)}`;
@@ -142,5 +167,60 @@ export const proposalStore = {
     if (!p) return undefined;
     p.status = "ordenada";
     return p;
+  },
+
+  /* ----------------------------- joyeros -------------------------------- */
+
+  listJewelers(): Jeweler[] {
+    return [...db.jewelers.values()].sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
+    );
+  },
+
+  getJeweler(id: string): Jeweler | undefined {
+    return db.jewelers.get(id);
+  },
+
+  /** El joyero edita SOLO sus campos de perfil (no `active`/`id`/`createdAt`). */
+  updateJewelerProfile(
+    id: string,
+    patch: Partial<
+      Pick<
+        Jeweler,
+        | "name"
+        | "legalName"
+        | "rfc"
+        | "address"
+        | "contactEmail"
+        | "contactPhone"
+      >
+    >,
+  ): Jeweler | undefined {
+    const j = db.jewelers.get(id);
+    if (!j) return undefined;
+    Object.assign(j, patch);
+    return j;
+  },
+
+  /** Administrado por NewCo. */
+  setJewelerActive(id: string, active: boolean): Jeweler | undefined {
+    const j = db.jewelers.get(id);
+    if (!j) return undefined;
+    j.active = active;
+    return j;
+  },
+
+  /* ----------------------------- bandas --------------------------------- */
+
+  listBands(): MarginBand[] {
+    return db.bands.map((b) => ({ ...b }));
+  },
+
+  /** Reemplaza la tabla de bandas (admin). */
+  saveBands(bands: MarginBand[]): MarginBand[] {
+    db.bands = bands
+      .map((b) => ({ ...b }))
+      .sort((a, b) => a.minValueUsd - b.minValueUsd);
+    return this.listBands();
   },
 };

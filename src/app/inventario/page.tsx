@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { auth } from "@/auth";
 import { InventoryBrowser } from "@/components/inventory/inventory-browser";
 
 export const metadata: Metadata = {
@@ -7,10 +8,11 @@ export const metadata: Metadata = {
     "Explora el inventario del proveedor y arma una propuesta para tu cliente.",
 };
 
-export default function InventarioPage() {
+export default async function InventarioPage() {
+  const session = await auth();
   return (
     <main className="flex-1">
-      <InventoryBrowser />
+      <InventoryBrowser user={session?.user ?? null} />
     </main>
   );
 }

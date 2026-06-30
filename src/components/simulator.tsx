@@ -12,8 +12,10 @@ import {
   DEFAULT_BANDS,
 } from "@/lib/quote";
 import { getMockStone, getMockStones } from "@/lib/inventory";
-import type { OpParams, Stone } from "@/lib/types";
+import { getBandsAction } from "@/app/portal-actions";
+import type { MarginBand, OpParams, Stone } from "@/lib/types";
 import { Button, Card, CardBody } from "@/components/ui/primitives";
+import { UserMenu, type SessionUser } from "@/components/user-menu";
 import { OperationCard, type RawOp } from "@/components/op-card";
 import { HeroCard } from "@/components/hero-card";
 import { CompositionBar } from "@/components/composition-bar";
@@ -40,11 +42,19 @@ function toOp(raw: RawOp): OpParams {
   };
 }
 
-export function Simulator() {
+export function Simulator({ user }: { user: SessionUser | null }) {
   const [rawOp, setRawOp] = useState<RawOp>(DEFAULT_RAW_OP);
   // Por defecto una piedra (la primera del inventario); el handoff la reemplaza.
   const [stones, setStones] = useState<Stone[]>(() => [getMockStones()[0]]);
+  // Bandas en vivo desde el store (las edita el admin).
+  const [bands, setBands] = useState<MarginBand[]>(DEFAULT_BANDS);
   const scope = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getBandsAction()
+      .then((b) => b.length && setBands(b))
+      .catch(() => {});
+  }, []);
 
   const updateOp = useCallback((key: keyof OpParams, value: string) => {
     setRawOp((prev) => ({ ...prev, [key]: value }));
@@ -64,20 +74,19 @@ export function Simulator() {
 
   const op = useMemo(() => toOp(rawOp), [rawOp]);
   const lines = useMemo(
-    () => stones.map((s) => lineFromStone(s, null, DEFAULT_BANDS)),
-    [stones],
+    () => stones.map((s) => lineFromStone(s, null, bands)),
+    [stones, bands],
   );
   const quote = useMemo(() => computeQuote(lines, op), [lines, op]);
 
   const savings = useMemo(() => {
     if (stones.length < 2) return 0;
     const standalone = stones.reduce(
-      (s, st) =>
-        s + computeQuote([lineFromStone(st, null, DEFAULT_BANDS)], op).allin,
+      (s, st) => s + computeQuote([lineFromStone(st, null, bands)], op).allin,
       0,
     );
     return standalone - quote.allin;
-  }, [stones, op, quote.allin]);
+  }, [stones, op, bands, quote.allin]);
 
   useGSAP(
     () => {
@@ -148,6 +157,7 @@ export function Simulator() {
             <PrintIcon />
             Export PDF
           </Button>
+          {user ? <UserMenu user={user} showAdminLink /> : null}
         </div>
       </header>
 

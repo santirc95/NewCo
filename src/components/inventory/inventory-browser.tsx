@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { stoneAllInUsd } from "@/lib/pricing";
+import { quoteStones, DEFAULT_OP, DEFAULT_BANDS } from "@/lib/quote";
+import { getBandsAction } from "@/app/portal-actions";
 import {
   getMockStones,
   getMockStone,
@@ -12,9 +13,10 @@ import {
   CUTS,
   LABS,
 } from "@/lib/inventory";
-import type { Stone, ProposalStatus } from "@/lib/types";
+import type { Stone, ProposalStatus, MarginBand } from "@/lib/types";
 import type { ProposalView as TrackedProposal } from "@/lib/store";
 import { GemTile } from "@/components/gem-icon";
+import { UserMenu, type SessionUser } from "@/components/user-menu";
 import {
   createProposalAction,
   listProposalsAction,
@@ -42,13 +44,22 @@ function simulatorHref(stoneIds: string | string[]): string {
   return `/?stones=${encodeURIComponent(ids)}`;
 }
 
-export function InventoryBrowser() {
+export function InventoryBrowser({ user }: { user: SessionUser | null }) {
   const stones = useMemo(() => getMockStones(), []);
+  const [bands, setBands] = useState<MarginBand[]>(DEFAULT_BANDS);
+  useEffect(() => {
+    getBandsAction()
+      .then((b) => b.length && setBands(b))
+      .catch(() => {});
+  }, []);
+
   const allInUsd = useMemo(() => {
     const m = new Map<string, number>();
-    stones.forEach((s) => m.set(s.id, stoneAllInUsd(s)));
+    stones.forEach((s) =>
+      m.set(s.id, quoteStones([s], DEFAULT_OP, null, bands).allin / DEFAULT_OP.fx),
+    );
     return m;
-  }, [stones]);
+  }, [stones, bands]);
 
   const [tab, setTab] = useState<"inventario" | "propuestas">("inventario");
 
@@ -147,12 +158,23 @@ export function InventoryBrowser() {
             </TabBtn>
           </nav>
         </div>
-        <Link
-          href="/"
-          className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-        >
-          Simulador
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+          >
+            Simulador
+          </Link>
+          {user?.role === "jeweler" ? (
+            <Link
+              href="/perfil"
+              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Mi perfil
+            </Link>
+          ) : null}
+          {user ? <UserMenu user={user} showAdminLink /> : null}
+        </div>
       </header>
 
       {tab === "inventario" ? (
