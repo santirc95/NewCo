@@ -453,7 +453,7 @@ function StoneCard({
           : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
       }`}
     >
-      <GemTile shape={stone.shape} size={56} className="h-24" />
+      <GemTile shape={stone.shape} size={88} className="aspect-square w-full" />
       <div>
         <div className="tabular text-[18px] font-semibold text-[var(--on-surface)]">
           {stone.carat.toFixed(2)}{" "}

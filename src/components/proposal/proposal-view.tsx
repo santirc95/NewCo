@@ -170,7 +170,7 @@ function ProposalCard({
           : "border-[var(--hairline)]"
       } ${dim ? "opacity-50" : ""}`}
     >
-      <GemTile shape={stone.shape} size={64} className="h-28" />
+      <GemTile shape={stone.shape} size={104} className="aspect-square w-full" />
       <div className="mt-3 text-center">
         <div className="tabular text-[28px] font-semibold leading-none text-[var(--on-surface)]">
           {stone.carat.toFixed(2)}{" "}
