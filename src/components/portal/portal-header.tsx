@@ -30,9 +30,11 @@ function NavLink({
 export function PortalHeader({
   user,
   active,
+  displayName,
 }: {
   user: SessionUser;
   active: Active;
+  displayName?: string | null;
 }) {
   const isAdmin = user.role === "admin";
   return (
@@ -65,7 +67,7 @@ export function PortalHeader({
           )}
         </nav>
       </div>
-      <UserMenu user={user} />
+      <UserMenu user={user} displayName={displayName} />
     </header>
   );
 }

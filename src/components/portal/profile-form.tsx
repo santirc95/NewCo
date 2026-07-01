@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { Jeweler, JewelerProfilePatch } from "@/lib/types";
 import { updateMyProfileAction } from "@/app/portal-actions";
 
@@ -50,6 +51,7 @@ export function ProfileForm({ jeweler }: { jeweler: Jeweler | null }) {
   }));
   const [saved, setSaved] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   if (!jeweler) {
     return (
@@ -85,6 +87,7 @@ export function ProfileForm({ jeweler }: { jeweler: Jeweler | null }) {
     };
     startTransition(async () => {
       await updateMyProfileAction(patch);
+      router.refresh(); // el header toma el nuevo nombre del negocio
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     });

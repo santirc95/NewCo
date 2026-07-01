@@ -44,7 +44,13 @@ function simulatorHref(stoneIds: string | string[]): string {
   return `/?stones=${encodeURIComponent(ids)}`;
 }
 
-export function InventoryBrowser({ user }: { user: SessionUser | null }) {
+export function InventoryBrowser({
+  user,
+  displayName,
+}: {
+  user: SessionUser | null;
+  displayName?: string | null;
+}) {
   const stones = useMemo(() => getMockStones(), []);
   const [bands, setBands] = useState<MarginBand[]>(DEFAULT_BANDS);
   useEffect(() => {
@@ -173,7 +179,9 @@ export function InventoryBrowser({ user }: { user: SessionUser | null }) {
               Mi perfil
             </Link>
           ) : null}
-          {user ? <UserMenu user={user} showAdminLink /> : null}
+          {user ? (
+            <UserMenu user={user} displayName={displayName} showAdminLink />
+          ) : null}
         </div>
       </header>
 

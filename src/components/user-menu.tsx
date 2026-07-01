@@ -10,17 +10,24 @@ export interface SessionUser {
   role: Role;
 }
 
-/** Identidad del usuario + cerrar sesión. Muestra el rol activo. */
+/** Identidad del usuario + cerrar sesión. Clic en el nombre → portal. */
 export function UserMenu({
   user,
+  displayName,
   showAdminLink,
 }: {
   user: SessionUser;
+  /** Nombre a mostrar (negocio del joyero); cae al nombre de sesión. */
+  displayName?: string | null;
   showAdminLink?: boolean;
 }) {
+  const isAdmin = user.role === "admin";
+  const portalHref = isAdmin ? "/admin" : "/perfil";
+  const name = displayName || user.name || user.email;
+
   return (
     <div className="flex items-center gap-2.5">
-      {showAdminLink && user.role === "admin" ? (
+      {showAdminLink && isAdmin ? (
         <Link
           href="/admin"
           className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
@@ -28,14 +35,18 @@ export function UserMenu({
           Admin
         </Link>
       ) : null}
-      <div className="hidden text-right leading-tight sm:block">
-        <div className="text-[12px] font-medium text-[var(--on-surface)]">
-          {user.name ?? user.email}
+      <Link
+        href={portalHref}
+        className="group hidden text-right leading-tight sm:block"
+        title="Ir a mi portal"
+      >
+        <div className="text-[12px] font-medium text-[var(--on-surface)] group-hover:text-[var(--warn-text)]">
+          {name}
         </div>
         <div className="label-caps text-[8.5px] text-[var(--warn-text)]">
-          {user.role === "admin" ? "Admin NewCo" : "Joyero"}
+          {isAdmin ? "Admin NewCo" : "Joyero"}
         </div>
-      </div>
+      </Link>
       <form action={logoutAction}>
         <button
           type="submit"

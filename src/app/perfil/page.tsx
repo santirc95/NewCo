@@ -14,7 +14,9 @@ export default async function PerfilPage() {
 
   return (
     <main className="flex-1">
-      {user ? <PortalHeader user={user} active="perfil" /> : null}
+      {user ? (
+        <PortalHeader user={user} active="perfil" displayName={jeweler?.name} />
+      ) : null}
       <div className="relative z-10 mx-auto max-w-3xl px-5 py-8 sm:px-8">
         <h1 className="text-[20px] font-bold text-[var(--on-surface)]">Mi perfil</h1>
         <p className="mt-1 mb-6 text-[12.5px] text-[var(--on-surface-variant)]">

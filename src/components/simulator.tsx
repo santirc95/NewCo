@@ -42,7 +42,13 @@ function toOp(raw: RawOp): OpParams {
   };
 }
 
-export function Simulator({ user }: { user: SessionUser | null }) {
+export function Simulator({
+  user,
+  displayName,
+}: {
+  user: SessionUser | null;
+  displayName?: string | null;
+}) {
   const [rawOp, setRawOp] = useState<RawOp>(DEFAULT_RAW_OP);
   // Por defecto una piedra (la primera del inventario); el handoff la reemplaza.
   const [stones, setStones] = useState<Stone[]>(() => [getMockStones()[0]]);
@@ -157,7 +163,9 @@ export function Simulator({ user }: { user: SessionUser | null }) {
             <PrintIcon />
             Export PDF
           </Button>
-          {user ? <UserMenu user={user} showAdminLink /> : null}
+          {user ? (
+            <UserMenu user={user} displayName={displayName} showAdminLink />
+          ) : null}
         </div>
       </header>
 
