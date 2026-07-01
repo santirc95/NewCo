@@ -1,8 +1,8 @@
 "use server";
 
 import { auth } from "@/auth";
-import { proposalStore } from "@/lib/store";
-import type { Jeweler, MarginBand } from "@/lib/types";
+import { repo } from "@/lib/repo";
+import type { Jeweler, JewelerProfilePatch, MarginBand } from "@/lib/types";
 
 /* --------------------------- guards (servidor) ---------------------------- */
 
@@ -20,42 +20,35 @@ async function requireSession() {
 
 /* ------------------------------ bandas (read) ----------------------------- */
 
-/** Lectura de bandas — la usa el simulador/inventario para cotizar. */
+/** Lectura de bandas — la usa el cotizador/inventario para cotizar. */
 export async function getBandsAction(): Promise<MarginBand[]> {
   await requireSession();
-  return proposalStore.listBands();
+  return repo.listBands();
 }
 
 /* ------------------------------ perfil joyero ----------------------------- */
-
-export type ProfilePatch = Partial<
-  Pick<
-    Jeweler,
-    "name" | "legalName" | "rfc" | "address" | "contactEmail" | "contactPhone"
-  >
->;
 
 export async function getMyJewelerAction(): Promise<Jeweler | null> {
   const s = await requireSession();
   const id = s.user.jewelerId;
   if (!id) return null;
-  return proposalStore.getJeweler(id) ?? null;
+  return (await repo.getJeweler(id)) ?? null;
 }
 
 export async function updateMyProfileAction(
-  patch: ProfilePatch,
+  patch: JewelerProfilePatch,
 ): Promise<Jeweler | null> {
   const s = await requireSession();
   const id = s.user.jewelerId;
   if (!id) throw new Error("No autorizado");
-  return proposalStore.updateJewelerProfile(id, patch) ?? null;
+  return (await repo.updateJewelerProfile(id, patch)) ?? null;
 }
 
 /* --------------------------------- admin ---------------------------------- */
 
 export async function adminListJewelersAction(): Promise<Jeweler[]> {
   await requireAdmin();
-  return proposalStore.listJewelers();
+  return repo.listJewelers();
 }
 
 export async function adminSetJewelerActiveAction(
@@ -63,12 +56,12 @@ export async function adminSetJewelerActiveAction(
   active: boolean,
 ): Promise<Jeweler | null> {
   await requireAdmin();
-  return proposalStore.setJewelerActive(id, active) ?? null;
+  return (await repo.setJewelerActive(id, active)) ?? null;
 }
 
 export async function adminSaveBandsAction(
   bands: MarginBand[],
 ): Promise<MarginBand[]> {
   await requireAdmin();
-  return proposalStore.saveBands(bands);
+  return repo.saveBands(bands);
 }

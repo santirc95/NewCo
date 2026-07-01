@@ -14,7 +14,7 @@ import {
   LABS,
 } from "@/lib/inventory";
 import type { Stone, ProposalStatus, MarginBand } from "@/lib/types";
-import type { ProposalView as TrackedProposal } from "@/lib/store";
+import type { ProposalView as TrackedProposal } from "@/lib/repo";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 import {
@@ -747,7 +747,7 @@ function ProposalRow({
     });
   };
   const doPay = () => {
-    const stoneId = hold?.stoneId ?? proposal.signaledStoneId;
+    const stoneId = hold?.stoneIds?.[0] ?? proposal.signaledStoneId;
     if (!stoneId) return;
     startTransition(async () => {
       await payJewelerAction(proposal.token, stoneId);

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { proposalStore } from "@/lib/store";
+import { repo } from "@/lib/repo";
 import { getMockStone } from "@/lib/inventory";
 import { ProposalView } from "@/components/proposal/proposal-view";
 import type { Stone } from "@/lib/types";
@@ -19,7 +19,7 @@ export default async function ProposalPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const proposal = proposalStore.get(token);
+  const proposal = await repo.getProposal(token);
   const stones: Stone[] = proposal
     ? proposal.stoneIds
         .map((id) => getMockStone(id))

@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { proposalStore } from "@/lib/store";
+import { repo } from "@/lib/repo";
 import { PortalHeader } from "@/components/portal/portal-header";
 import { ProfileForm } from "@/components/portal/profile-form";
 
@@ -9,7 +9,7 @@ export default async function PerfilPage() {
   const session = await auth();
   const user = session?.user;
   const jeweler = user?.jewelerId
-    ? (proposalStore.getJeweler(user.jewelerId) ?? null)
+    ? ((await repo.getJeweler(user.jewelerId)) ?? null)
     : null;
 
   return (

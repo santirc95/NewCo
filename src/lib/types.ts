@@ -1,9 +1,11 @@
 /**
- * Modelo de datos — Etapa 1.
+ * Modelo de datos — Etapa 1 v3.
  *
- * NewCo es el PRINCIPAL: le vende el diamante importado al joyero. El cliente
- * final solo ve y señala (capa de presentación, sin precio ni pago).
- * Los tipos son el contrato estable; en Cap.2 se conectan API/Airtable reales.
+ * NewCo (importador de registro) le VENDE el diamante importado al joyero, con
+ * CFDI y nacionalización resueltas. El cliente final solo ve y señala.
+ *
+ * Los datos de NewCo viven tras la capa de datos (`repo/`) — hoy en memoria,
+ * mañana en Airtable. El inventario del proveedor NO vive aquí (viene de su API).
  */
 
 export type Shape =
@@ -15,30 +17,124 @@ export type Shape =
   | "Princesa"
   | "Marquesa";
 
-/** Roles del sistema. Permisos validados en el servidor. */
 export type Role = "jeweler" | "admin";
+export type DiamondType = "natural" | "lab";
+export type Lab = "GIA" | "IGI";
+export type Cut = "EX" | "VG" | "G";
 
-/** Perfil del joyero. Parte editable por él; parte administrada por NewCo. */
+/** Una piedra del inventario del proveedor (de su API; mock por ahora). */
+export interface Stone {
+  id: string;
+  certNumber: string;
+  shape: Shape;
+  carat: number;
+  color: string;
+  clarity: string;
+  cut: Cut;
+  polish?: string;
+  symmetry?: string;
+  fluorescence?: string;
+  measurements?: string;
+  depthPct?: number;
+  tablePct?: number;
+  lab: Lab;
+  type: DiamondType;
+  origin?: string;
+  /** Precio real de origen (USD) — NO editable a mano. */
+  supplierPriceUsd: number;
+  photoUrl?: string;
+  videoUrl?: string;
+  certUrl?: string;
+  holdWindowHours: number;
+}
+
+/* ------------------------------- facturación ------------------------------ */
+
+export interface DomicilioFiscal {
+  calle: string;
+  numExt: string;
+  numInt?: string;
+  colonia: string;
+  municipio: string;
+  estado: string;
+  cp: string;
+}
+
+/** Perfil del joyero + datos CFDI 4.0. Tabla "Joyeros". */
 export interface Jeweler {
   id: string;
-  // Editable por el JOYERO:
+  role: Role;
   name: string;
-  legalName: string;
+  // Facturación CFDI 4.0 (validar valores con contador):
   rfc: string;
-  address: string;
-  contactEmail: string;
-  contactPhone: string;
-  branding?: { logoText: string }; // white-label = Cap.2
-  // Administrado por NEWCO (el joyero NO lo edita):
+  razonSocial: string;
+  regimenFiscal: string;
+  cpFiscal: string;
+  usoCfdi: string;
+  domicilioFiscal: DomicilioFiscal;
+  branding?: { logoUrl?: string; logoText: string };
+  // Administrado por NewCo:
   active: boolean;
   createdAt: string;
 }
 
-/** Banda de margen GLOBAL por valor de piedra (USD). Administrada por NewCo. */
+/** Campos que el joyero puede editar de su propio perfil. */
+export type JewelerProfilePatch = Partial<
+  Pick<
+    Jeweler,
+    | "name"
+    | "rfc"
+    | "razonSocial"
+    | "regimenFiscal"
+    | "cpFiscal"
+    | "usoCfdi"
+    | "domicilioFiscal"
+  >
+> & { branding?: { logoUrl?: string; logoText: string } };
+
+/** Tabla "Direcciones" — varias por joyero. */
+export interface ShippingAddress {
+  id: string;
+  jewelerId: string;
+  label: string;
+  calle: string;
+  numExt: string;
+  numInt?: string;
+  colonia: string;
+  municipio: string;
+  estado: string;
+  cp: string;
+  isDefault: boolean;
+}
+
+/** Tabla "MetodosPago" — SIN datos crudos (solo token/referencia). */
+export interface PaymentMethod {
+  id: string;
+  jewelerId: string;
+  type: "card" | "spei";
+  token?: string; // token del procesador — NUNCA el PAN
+  reference?: string; // ref. SPEI — NUNCA datos sensibles crudos
+  label: string;
+  isDefault: boolean;
+}
+
+/** Tabla "Favoritos" — snapshot al marcar (el inventario es vivo). */
+export interface Favorite {
+  id: string;
+  jewelerId: string;
+  stoneId: string;
+  certNumber: string;
+  snapshot: Partial<Stone>;
+  createdAt: string;
+}
+
+/* --------------------------------- cálculo -------------------------------- */
+
+/** Banda de margen GLOBAL por valor de piedra (USD). Tabla "Bandas". */
 export interface MarginBand {
   id: string;
   minValueUsd: number;
-  maxValueUsd: number | null; // null = sin tope superior
+  maxValueUsd: number | null;
   marginPct: number;
 }
 
@@ -51,14 +147,12 @@ export interface OpParams {
   agenteMxn: number;
 }
 
-/** Entrada de una línea de cotización (piedra + su margen ya resuelto). */
 export interface QuoteLineInput {
   stoneId: string;
   supplierPriceUsd: number;
   marginPct: number;
 }
 
-/** Cálculo por piedra dentro de una orden. */
 export interface LineQuote {
   stoneId: string;
   stoneMxn: number;
@@ -73,7 +167,6 @@ export interface LineQuote {
   price: number;
 }
 
-/** Cotización de una orden (1+ piedras). */
 export interface Quote {
   lines: LineQuote[];
   landedTotal: number;
@@ -91,31 +184,8 @@ export interface Quote {
   };
 }
 
-export type DiamondType = "natural" | "lab";
-export type Lab = "GIA" | "IGI";
-/** Corte: Excelente / Muy buena / Buena. */
-export type Cut = "EX" | "VG" | "G";
+/* -------------------------- propuestas / holds / órdenes ------------------ */
 
-/** Una piedra del inventario del proveedor (vendría de su API). */
-export interface Stone {
-  id: string;
-  certNumber: string;
-  shape: Shape;
-  carat: number;
-  color: string;
-  clarity: string;
-  cut: Cut;
-  lab: Lab;
-  type: DiamondType;
-  /** Costo del proveedor en USD — alimenta computeQuote. */
-  supplierPriceUsd: number;
-  /** La API real trae foto/video; en mock queda undefined. */
-  photoUrl?: string;
-  /** Ventana de hold del proveedor (dato real tras negociación). */
-  holdWindowHours: number;
-}
-
-/** enviada → señalada → en_hold → pagada → ordenada. */
 export type ProposalStatus =
   | "enviada"
   | "señalada"
@@ -123,14 +193,15 @@ export type ProposalStatus =
   | "pagada"
   | "ordenada";
 
-/** Propuesta que el joyero arma y comparte con su cliente final. */
+/** Tabla "Propuestas". */
 export interface Proposal {
   id: string;
-  token: string; // link público impredecible
-  clientName: string; // lo captura el joyero
-  stoneIds: string[]; // 1–4 piedras curadas
-  signaledStoneId?: string; // la que el cliente final señaló
-  /** WhatsApp del joyero (dígitos) para el aviso click-to-chat del cliente. */
+  token: string;
+  jewelerId: string;
+  clientName: string;
+  stoneIds: string[];
+  signaledStoneId?: string;
+  /** WhatsApp del joyero para el aviso click-to-chat del cliente. */
   jewelerWhatsapp?: string;
   createdAt: string;
   status: ProposalStatus;
@@ -138,21 +209,42 @@ export interface Proposal {
 
 export type HoldStatus = "active" | "released" | "expired" | "converted";
 
-/** Apartado de una piedra — lo dispara el JOYERO. */
+/** Tabla "Holds" — lo dispara el joyero. */
 export interface Hold {
   id: string;
   proposalId: string;
-  stoneId: string;
+  stoneIds: string[];
   startedAt: number; // epoch ms
-  expiresAt: number; // epoch ms — (expiresAt - startedAt) ≤ stone.holdWindowHours
+  expiresAt: number; // epoch ms — ≤ min(holdWindowHours de las piedras)
   status: HoldStatus;
 }
 
-/** Orden creada al confirmarse el pago del joyero a NewCo. */
+/** Etapas de trazabilidad de una orden. */
+export type OrderStage =
+  | "orden_creada"
+  | "pago_confirmado"
+  | "confirmado_proveedor"
+  | "en_transito"
+  | "en_aduana"
+  | "nacionalizado"
+  | "entregado";
+
+export interface OrderStatus {
+  stage: OrderStage;
+  at: string;
+  note?: string;
+}
+
+/** Tabla "Ordenes". Snapshots inmutables + trazabilidad. Alimenta lealtad (Cap.2). */
 export interface Order {
   id: string;
+  jewelerId: string;
   proposalId: string;
-  stoneId: string;
+  stoneSnapshots: Partial<Stone>[];
+  quoteSnapshot: Quote;
+  totalUsd: number;
   jewelerPaymentRef: string;
+  folio?: string; // folio de factura secuencial e inmutable al emitir
+  tracking: OrderStatus[];
   createdAt: string;
 }

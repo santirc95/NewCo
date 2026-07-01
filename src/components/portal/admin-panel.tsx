@@ -154,7 +154,7 @@ export function AdminPanel({
                   {j.name}
                 </div>
                 <div className="tabular truncate text-[11.5px] text-[var(--on-surface-variant)]">
-                  {j.legalName} · {j.rfc}
+                  {j.razonSocial} · {j.rfc}
                 </div>
               </div>
               <div className="flex items-center gap-3">

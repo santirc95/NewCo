@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { proposalStore } from "@/lib/store";
+import { repo } from "@/lib/repo";
 import { PortalHeader } from "@/components/portal/portal-header";
 import { AdminPanel } from "@/components/portal/admin-panel";
 
@@ -12,8 +12,8 @@ export default async function AdminPage() {
   // Doble validación en servidor (además del middleware).
   if (!user || user.role !== "admin") redirect("/login");
 
-  const bands = proposalStore.listBands();
-  const jewelers = proposalStore.listJewelers();
+  const bands = await repo.listBands();
+  const jewelers = await repo.listJewelers();
 
   return (
     <main className="flex-1">

@@ -1,11 +1,17 @@
 "use server";
 
-import { proposalStore, type ProposalView } from "@/lib/store";
+import { auth } from "@/auth";
+import { repo, type ProposalView } from "@/lib/repo";
 import { notifier, supplier } from "@/lib/notify";
 import { payments } from "@/lib/payments";
 import { getMockStone } from "@/lib/inventory";
-import { stoneAllIn } from "@/lib/pricing";
+import { computeQuote, lineFromStone, DEFAULT_OP } from "@/lib/quote";
 import type { Proposal } from "@/lib/types";
+
+async function currentJewelerId(): Promise<string | undefined> {
+  const s = await auth();
+  return s?.user?.jewelerId;
+}
 
 /** El joyero arma la propuesta y obtiene el link público. */
 export async function createProposalAction(
@@ -13,8 +19,14 @@ export async function createProposalAction(
   stoneIds: string[],
   jewelerWhatsapp?: string,
 ): Promise<Proposal> {
+  const jewelerId = (await currentJewelerId()) ?? "jwl-vecchia";
   const digits = (jewelerWhatsapp ?? "").replace(/\D/g, "");
-  return proposalStore.create(clientName.trim(), stoneIds, digits || undefined);
+  return repo.createProposal({
+    jewelerId,
+    clientName: clientName.trim(),
+    stoneIds,
+    jewelerWhatsapp: digits || undefined,
+  });
 }
 
 /** El cliente final señala interés → notifica al joyero (mock). */
@@ -22,7 +34,7 @@ export async function signalInterestAction(
   token: string,
   stoneId: string,
 ): Promise<Proposal | null> {
-  const p = proposalStore.signal(token, stoneId);
+  const p = await repo.signalInterest(token, stoneId);
   if (p) notifier.jewelerSignaled(p.id, stoneId, p.clientName);
   return p ?? null;
 }
@@ -32,45 +44,58 @@ export async function triggerHoldAction(
   token: string,
   stoneId: string,
 ): Promise<ProposalView | null> {
-  const r = proposalStore.hold(token, stoneId);
-  if (!r) return null;
-  return proposalStore.view(token) ?? null;
+  return (await repo.triggerHold(token, [stoneId])) ?? null;
 }
 
 /**
  * Cobra al joyero y, SOLO DESPUÉS, confirma la orden con el proveedor.
- * Secuencia obligatoria: nunca confirmar con el proveedor sin el pago.
+ * Crea la Order con snapshots inmutables (piedra + cotización) + folio.
  */
 export async function payJewelerAction(
   token: string,
   stoneId: string,
 ): Promise<ProposalView | null> {
   const stone = getMockStone(stoneId);
-  const amountMxn = stone ? stoneAllIn(stone) : 0;
+  if (!stone) return null;
+
+  // Cotización inmutable al momento del pago (bandas vivas del store).
+  const bands = await repo.listBands();
+  const quote = computeQuote(
+    [lineFromStone(stone, null, bands)],
+    DEFAULT_OP,
+  );
 
   // 1) Cobro al joyero (NewCo como principal).
-  const pay = await payments.charge(amountMxn);
+  const pay = await payments.charge(quote.allin);
   if (pay.status !== "confirmado") return null;
 
-  // 2) Pago confirmado → crear Order.
-  const r = proposalStore.recordPayment(token, stoneId, pay.ref);
+  // 2) Pago confirmado → crear Order con snapshots + folio.
+  const r = await repo.recordPaymentAndOrder({
+    token,
+    stoneIds: [stoneId],
+    paymentRef: pay.ref,
+    totalUsd: stone.supplierPriceUsd,
+    quoteSnapshot: quote,
+    stoneSnapshots: [{ ...stone }],
+  });
   if (!r) return null;
 
   // 3) Con el pago en mano, confirmar con el proveedor.
   supplier.confirmOrder(stoneId);
-  proposalStore.markOrdered(token);
+  await repo.confirmOrderWithSupplier(r.order.id);
 
-  return proposalStore.view(token) ?? null;
+  return (await repo.viewProposal(token)) ?? null;
 }
 
-/** Seguimiento del joyero: lista enriquecida (propuesta + hold + order). */
+/** Seguimiento del joyero: sus propuestas (o todas si admin). */
 export async function listProposalsAction(): Promise<ProposalView[]> {
-  return proposalStore.list();
+  const jewelerId = await currentJewelerId();
+  return repo.listProposals(jewelerId);
 }
 
 /** Estado de una propuesta (para el cliente final). */
 export async function getProposalAction(
   token: string,
 ): Promise<Proposal | null> {
-  return proposalStore.get(token) ?? null;
+  return (await repo.getProposal(token)) ?? null;
 }
