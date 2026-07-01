@@ -39,13 +39,13 @@ export function ProfileForm({ jeweler }: { jeweler: Jeweler | null }) {
     cpFiscal: jeweler?.cpFiscal ?? "",
     usoCfdi: jeweler?.usoCfdi ?? "",
     dom: {
-      calle: jeweler?.domicilioFiscal.calle ?? "",
-      numExt: jeweler?.domicilioFiscal.numExt ?? "",
-      numInt: jeweler?.domicilioFiscal.numInt ?? "",
-      colonia: jeweler?.domicilioFiscal.colonia ?? "",
-      municipio: jeweler?.domicilioFiscal.municipio ?? "",
-      estado: jeweler?.domicilioFiscal.estado ?? "",
-      cp: jeweler?.domicilioFiscal.cp ?? "",
+      calle: jeweler?.domicilioFiscal?.calle ?? "",
+      numExt: jeweler?.domicilioFiscal?.numExt ?? "",
+      numInt: jeweler?.domicilioFiscal?.numInt ?? "",
+      colonia: jeweler?.domicilioFiscal?.colonia ?? "",
+      municipio: jeweler?.domicilioFiscal?.municipio ?? "",
+      estado: jeweler?.domicilioFiscal?.estado ?? "",
+      cp: jeweler?.domicilioFiscal?.cp ?? "",
     },
   }));
   const [saved, setSaved] = useState(false);

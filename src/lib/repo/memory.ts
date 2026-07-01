@@ -62,10 +62,11 @@ function seedJewelers(): Map<string, Jeweler> {
   return m;
 }
 
-const g = globalThis as unknown as { __newcoDb?: DB };
+// Llave versionada: al cambiar el modelo, re-siembra sin arrastrar datos viejos.
+const g = globalThis as unknown as { __newcoDbV3?: DB };
 const db: DB =
-  g.__newcoDb ??
-  (g.__newcoDb = {
+  g.__newcoDbV3 ??
+  (g.__newcoDbV3 = {
     jewelers: seedJewelers(),
     bands: DEFAULT_BANDS.map((b) => ({ ...b })),
     proposals: new Map(),
