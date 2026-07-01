@@ -10,11 +10,13 @@ function Field({
   value,
   onChange,
   className,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   className?: string;
+  hint?: string;
 }) {
   return (
     <label className={`block ${className ?? ""}`}>
@@ -27,6 +29,11 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] px-3 py-2 text-[14px] text-[var(--on-surface)] outline-none focus:border-[var(--gold)]"
       />
+      {hint ? (
+        <span className="mt-1 block text-[10.5px] leading-snug text-[var(--outline)]">
+          {hint}
+        </span>
+      ) : null}
     </label>
   );
 }
@@ -105,7 +112,12 @@ export function ProfileForm({ jeweler }: { jeweler: Jeweler | null }) {
           <Field label="Razón social" value={form.razonSocial} onChange={(v) => set("razonSocial", v)} className="sm:col-span-2" />
           <Field label="Régimen fiscal" value={form.regimenFiscal} onChange={(v) => set("regimenFiscal", v)} />
           <Field label="Uso de CFDI" value={form.usoCfdi} onChange={(v) => set("usoCfdi", v)} />
-          <Field label="CP fiscal" value={form.cpFiscal} onChange={(v) => set("cpFiscal", v)} />
+          <Field
+            label="CP fiscal (SAT)"
+            value={form.cpFiscal}
+            onChange={(v) => set("cpFiscal", v)}
+            hint="El de tu Constancia de Situación Fiscal (SAT) · lugar de expedición. Puede diferir del CP del domicilio."
+          />
         </div>
       </section>
 
@@ -120,7 +132,12 @@ export function ProfileForm({ jeweler }: { jeweler: Jeweler | null }) {
           <Field label="Colonia" value={form.dom.colonia} onChange={(v) => setDom("colonia", v)} />
           <Field label="Municipio / Alcaldía" value={form.dom.municipio} onChange={(v) => setDom("municipio", v)} />
           <Field label="Estado" value={form.dom.estado} onChange={(v) => setDom("estado", v)} />
-          <Field label="Código postal" value={form.dom.cp} onChange={(v) => setDom("cp", v)} />
+          <Field
+            label="Código postal (domicilio)"
+            value={form.dom.cp}
+            onChange={(v) => setDom("cp", v)}
+            hint="CP del domicilio físico (puede ser distinto al CP fiscal)."
+          />
         </div>
       </section>
 
