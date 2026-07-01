@@ -134,7 +134,7 @@ export function Simulator({
     >
       <header
         data-animate="head"
-        className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        className="relative z-40 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-center gap-3">
           <div
