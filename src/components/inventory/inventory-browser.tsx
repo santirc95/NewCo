@@ -169,19 +169,9 @@ export function InventoryBrowser({
             href="/"
             className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
           >
-            Simulador
+            Cotizador
           </Link>
-          {user?.role === "jeweler" ? (
-            <Link
-              href="/perfil"
-              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-            >
-              Mi perfil
-            </Link>
-          ) : null}
-          {user ? (
-            <UserMenu user={user} displayName={displayName} showAdminLink />
-          ) : null}
+          {user ? <UserMenu user={user} displayName={displayName} /> : null}
         </div>
       </header>
 

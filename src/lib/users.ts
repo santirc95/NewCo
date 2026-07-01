@@ -40,3 +40,22 @@ export function verifyUser(email: string, password: string): AppUser | undefined
   const u = findUserByEmail(email);
   return u && u.password === password ? u : undefined;
 }
+
+/**
+ * Cambia la contraseña de un usuario (mock, en memoria del proceso).
+ * // TODO Cap.2: hash + persistencia real.
+ */
+export function updatePassword(
+  email: string,
+  current: string,
+  next: string,
+): { ok: boolean; error?: string } {
+  const u = findUserByEmail(email);
+  if (!u) return { ok: false, error: "Usuario no encontrado." };
+  if (u.password !== current)
+    return { ok: false, error: "La contraseña actual no coincide." };
+  if (next.length < 6)
+    return { ok: false, error: "La nueva contraseña debe tener al menos 6 caracteres." };
+  u.password = next;
+  return { ok: true };
+}

@@ -163,9 +163,7 @@ export function Simulator({
             <PrintIcon />
             Export PDF
           </Button>
-          {user ? (
-            <UserMenu user={user} displayName={displayName} showAdminLink />
-          ) : null}
+          {user ? <UserMenu user={user} displayName={displayName} /> : null}
         </div>
       </header>
 

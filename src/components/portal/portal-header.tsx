@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 
-type Active = "inventario" | "simulador" | "perfil" | "admin";
+type Active = "inventario" | "simulador" | "perfil" | "admin" | "portal";
 
 function NavLink({
   href,
@@ -58,10 +58,7 @@ export function PortalHeader({
                 Inventario
               </NavLink>
               <NavLink href="/" active={active === "simulador"}>
-                Simulador
-              </NavLink>
-              <NavLink href="/perfil" active={active === "perfil"}>
-                Mi perfil
+                Cotizador
               </NavLink>
             </>
           )}
