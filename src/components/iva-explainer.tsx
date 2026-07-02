@@ -51,7 +51,7 @@ function Row({
       <div className="flex items-center gap-2">
         <span className={labelClass}>{label}</span>
         {chip ? (
-          <span className="label-caps rounded-[2px] bg-[var(--warn-bg)] px-1.5 py-0.5 text-[9px] text-[var(--warn-text)]">
+          <span className="label-caps rounded-[2px] bg-[rgba(95,163,130,0.15)] px-1.5 py-0.5 text-[9px] text-[#3f7a5e]">
             {chip}
           </span>
         ) : null}
