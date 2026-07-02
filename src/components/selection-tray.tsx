@@ -118,6 +118,13 @@ function GenerateModal({
     }
   };
 
+  const sendWhatsApp = () => {
+    const hola = clientName.trim() ? `Hola ${clientName.trim()}, ` : "Hola, ";
+    const msg = `${hola}te comparto una selección de diamantes que preparé para ti. Puedes verla aquí: ${url}`;
+    // Sin número: WhatsApp deja elegir al contacto (el cliente).
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  };
+
   return (
     <div
       className="no-print fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,24,20,0.45)] p-4 backdrop-blur-sm"
@@ -198,11 +205,19 @@ function GenerateModal({
                 {copied ? "Copiado" : "Copiar"}
               </button>
             </div>
+            <button
+              type="button"
+              onClick={sendWhatsApp}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-[8px] bg-[#1fa855] py-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <WhatsAppIcon />
+              Enviar por WhatsApp
+            </button>
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 block w-full rounded-[8px] border border-[var(--gold)] py-2.5 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
+              className="mt-2 block w-full rounded-[8px] border border-[var(--gold)] py-2.5 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
             >
               Abrir como lo verá tu cliente →
             </a>
@@ -225,5 +240,13 @@ function GenerateModal({
         </button>
       </div>
     </div>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M17.5 14.4c-.3-.15-1.8-.9-2.07-1-.28-.1-.48-.15-.68.15-.2.3-.78 1-.96 1.2-.18.2-.35.22-.65.08-.3-.15-1.27-.47-2.42-1.5-.9-.8-1.5-1.78-1.67-2.08-.18-.3-.02-.46.13-.6.13-.14.3-.35.44-.53.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.68-1.63-.93-2.23-.24-.58-.5-.5-.68-.51h-.58c-.2 0-.53.08-.8.38-.28.3-1.06 1.03-1.06 2.5s1.08 2.9 1.23 3.1c.15.2 2.13 3.25 5.16 4.56.72.3 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.08 1.8-.73 2.05-1.44.25-.7.25-1.3.18-1.44-.07-.13-.27-.2-.57-.35ZM12 2a10 10 0 0 0-8.6 15.1L2 22l5.05-1.32A10 10 0 1 0 12 2Z" />
+    </svg>
   );
 }
