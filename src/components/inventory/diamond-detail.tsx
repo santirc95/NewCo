@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Stone } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
+import { useSelection } from "@/components/selection-provider";
 import { addFavoriteAction, removeFavoriteAction } from "@/app/favorites-actions";
 
 const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
@@ -49,6 +51,15 @@ export function DiamondDetail({
 }) {
   const [fav, setFav] = useState(initialFav);
   const [, startTransition] = useTransition();
+  const sel = useSelection();
+  const router = useRouter();
+  const inProposal = sel.has(stone.id);
+  const atMax = !inProposal && sel.selected.length >= sel.max;
+
+  const addToProposal = () => {
+    sel.add(stone.id);
+    router.push("/inventario");
+  };
 
   const toggleFav = () => {
     const next = !fav;
@@ -195,12 +206,24 @@ export function DiamondDetail({
 
           {/* Acciones */}
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
-            <Link
-              href={`/inventario?add=${stone.id}`}
-              className="flex-1 rounded-[10px] bg-[var(--primary)] py-3 text-center text-[13px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90"
+            <button
+              type="button"
+              onClick={addToProposal}
+              disabled={atMax}
+              className={`flex-1 rounded-[10px] py-3 text-center text-[13px] font-medium transition-all ${
+                inProposal
+                  ? "border border-[var(--gold)] bg-[var(--warn-bg)] text-[var(--warn-text)]"
+                  : atMax
+                    ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+                    : "bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90"
+              }`}
             >
-              Agregar a propuesta
-            </Link>
+              {inProposal
+                ? "✓ En propuesta"
+                : atMax
+                  ? "Propuesta llena (máx 4)"
+                  : "Agregar a propuesta"}
+            </button>
             <Link
               href={`/?stones=${stone.id}`}
               className="flex-1 rounded-[10px] border border-[var(--gold)] py-3 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"

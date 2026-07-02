@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SelectionProvider } from "@/components/selection-provider";
 
 const hanken = Hanken_Grotesk({
   variable: "--font-hanken",
@@ -30,7 +31,9 @@ export default function RootLayout({
       lang="es-MX"
       className={`${hanken.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SelectionProvider>{children}</SelectionProvider>
+      </body>
     </html>
   );
 }

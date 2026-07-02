@@ -17,6 +17,7 @@ import type { Stone, ProposalStatus, MarginBand } from "@/lib/types";
 import type { ProposalView as TrackedProposal } from "@/lib/repo";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
+import { useSelection, MAX_SELECT } from "@/components/selection-provider";
 import {
   createProposalAction,
   listProposalsAction,
@@ -30,7 +31,6 @@ import {
 } from "@/app/favorites-actions";
 
 type Multi = Set<string>;
-const MAX_SELECT = 4;
 
 // Inventario en USD (estándar de la industria del diamante).
 const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
@@ -85,7 +85,8 @@ export function InventoryBrowser({
   const [ctMax, setCtMax] = useState("");
   const [priceMax, setPriceMax] = useState("");
 
-  const [selected, setSelected] = useState<Multi>(new Set());
+  // Selección de propuesta: contexto en el layout raíz (persiste entre páginas).
+  const sel = useSelection();
   const [genOpen, setGenOpen] = useState(false);
 
   // Favoritos (♥) con snapshot en el servidor.
@@ -110,17 +111,6 @@ export function InventoryBrowser({
     });
   };
 
-  // Handoff desde el detalle: ?add=<id> preselecciona la piedra.
-  useEffect(() => {
-    const add = new URLSearchParams(window.location.search).get("add");
-    if (!add || !getMockStone(add)) return;
-    setSelected((prev) => {
-      if (prev.has(add) || prev.size >= MAX_SELECT) return prev;
-      const next = new Set(prev);
-      next.add(add);
-      return next;
-    });
-  }, []);
 
   // seguimiento de propuestas (polling al store del servidor)
   const [proposals, setProposals] = useState<TrackedProposal[]>([]);
@@ -164,14 +154,6 @@ export function InventoryBrowser({
     setCtMin("");
     setCtMax("");
     setPriceMax("");
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelected((prev) => {
-      if (prev.has(id)) return toggle(prev, id);
-      if (prev.size >= MAX_SELECT) return prev; // tope 1–4
-      return toggle(prev, id);
-    });
   };
 
   const pendingSignals = proposals.filter(
@@ -297,9 +279,9 @@ export function InventoryBrowser({
                     key={d.id}
                     stone={d}
                     priceUsd={allInUsd.get(d.id) ?? 0}
-                    selected={selected.has(d.id)}
-                    disabled={!selected.has(d.id) && selected.size >= MAX_SELECT}
-                    onToggle={() => toggleSelect(d.id)}
+                    selected={sel.has(d.id)}
+                    disabled={!sel.has(d.id) && sel.selected.length >= MAX_SELECT}
+                    onToggle={() => sel.toggle(d.id)}
                     favorite={favIds.has(d.id)}
                     onToggleFav={() => toggleFav(d.id)}
                   />
@@ -313,12 +295,12 @@ export function InventoryBrowser({
       )}
 
       {/* Bandeja: armar propuesta */}
-      {tab === "inventario" && selected.size > 0 ? (
+      {tab === "inventario" && sel.selected.length > 0 ? (
         <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface)]/95 px-5 py-3 backdrop-blur-md sm:px-8">
           <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex">
-                {[...selected].slice(0, 5).map((id, i) => {
+                {sel.selected.slice(0, 5).map((id, i) => {
                   const s = getMockStone(id);
                   return s ? (
                     <div
@@ -332,8 +314,8 @@ export function InventoryBrowser({
                 })}
               </div>
               <div className="text-[13px] text-[var(--on-surface-variant)]">
-                <b className="text-[var(--on-surface)]">{selected.size}</b> de {MAX_SELECT}{" "}
-                {selected.size === 1 ? "piedra seleccionada" : "piedras seleccionadas"}
+                <b className="text-[var(--on-surface)]">{sel.selected.length}</b> de {MAX_SELECT}{" "}
+                {sel.selected.length === 1 ? "piedra seleccionada" : "piedras seleccionadas"}
                 <span className="ml-1.5 hidden text-[var(--outline)] sm:inline">
                   · simúlalas juntas o arma la propuesta
                 </span>
@@ -341,10 +323,10 @@ export function InventoryBrowser({
             </div>
             <div className="flex items-center gap-2">
               <Link
-                href={simulatorHref([...selected])}
+                href={simulatorHref(sel.selected)}
                 className="label-caps rounded-[6px] border border-[var(--gold)] px-3.5 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
               >
-                Simular orden ({selected.size})
+                Simular orden ({sel.selected.length})
               </Link>
               <button
                 type="button"
@@ -360,10 +342,10 @@ export function InventoryBrowser({
 
       {genOpen ? (
         <GenerateModal
-          stoneIds={[...selected]}
+          stoneIds={sel.selected}
           onClose={() => setGenOpen(false)}
           onCreated={() => {
-            setSelected(new Set());
+            sel.clear();
             refresh();
             setTab("propuestas");
           }}
