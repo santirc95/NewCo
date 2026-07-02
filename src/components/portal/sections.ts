@@ -8,10 +8,10 @@ export interface PortalSection {
 
 export const PORTAL_SECTIONS: PortalSection[] = [
   { href: "/portal/facturacion", label: "Facturación" },
-  { href: "/portal/password", label: "Contraseña" },
-  { href: "/portal/compras", label: "Compras", soon: true },
-  { href: "/portal/direcciones", label: "Direcciones", soon: true },
-  { href: "/portal/pagos", label: "Métodos de pago", soon: true },
+  { href: "/portal/compras", label: "Compras" },
   { href: "/favoritos", label: "Favoritos" },
-  { href: "/portal/branding", label: "Branding", soon: true },
+  { href: "/portal/direcciones", label: "Direcciones" },
+  { href: "/portal/pagos", label: "Métodos de pago" },
+  { href: "/portal/branding", label: "Branding" },
+  { href: "/portal/password", label: "Contraseña" },
 ];
