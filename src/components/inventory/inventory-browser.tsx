@@ -19,7 +19,6 @@ import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 import { useSelection, MAX_SELECT } from "@/components/selection-provider";
 import {
-  createProposalAction,
   listProposalsAction,
   triggerHoldAction,
   payJewelerAction,
@@ -87,7 +86,6 @@ export function InventoryBrowser({
 
   // Selección de propuesta: contexto en el layout raíz (persiste entre páginas).
   const sel = useSelection();
-  const [genOpen, setGenOpen] = useState(false);
 
   // Favoritos (♥) con snapshot en el servidor.
   const [favIds, setFavIds] = useState<Multi>(new Set());
@@ -294,63 +292,6 @@ export function InventoryBrowser({
         <ProposalsPanel proposals={proposals} onChanged={refresh} />
       )}
 
-      {/* Bandeja: armar propuesta */}
-      {tab === "inventario" && sel.selected.length > 0 ? (
-        <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface)]/95 px-5 py-3 backdrop-blur-md sm:px-8">
-          <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex">
-                {sel.selected.slice(0, 5).map((id, i) => {
-                  const s = getMockStone(id);
-                  return s ? (
-                    <div
-                      key={id}
-                      className="rounded-md border border-[var(--hairline)]"
-                      style={{ marginLeft: i === 0 ? 0 : -8 }}
-                    >
-                      <GemTile shape={s.shape} size={22} className="h-9 w-9" />
-                    </div>
-                  ) : null;
-                })}
-              </div>
-              <div className="text-[13px] text-[var(--on-surface-variant)]">
-                <b className="text-[var(--on-surface)]">{sel.selected.length}</b> de {MAX_SELECT}{" "}
-                {sel.selected.length === 1 ? "piedra seleccionada" : "piedras seleccionadas"}
-                <span className="ml-1.5 hidden text-[var(--outline)] sm:inline">
-                  · simúlalas juntas o arma la propuesta
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href={simulatorHref(sel.selected)}
-                className="label-caps rounded-[6px] border border-[var(--gold)] px-3.5 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-              >
-                Simular orden ({sel.selected.length})
-              </Link>
-              <button
-                type="button"
-                onClick={() => setGenOpen(true)}
-                className="label-caps inline-flex items-center gap-2 rounded-[6px] bg-[var(--primary)] px-4 py-2.5 text-[11px] text-[var(--on-primary)] transition-opacity hover:opacity-90"
-              >
-                Armar propuesta →
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {genOpen ? (
-        <GenerateModal
-          stoneIds={sel.selected}
-          onClose={() => setGenOpen(false)}
-          onCreated={() => {
-            sel.clear();
-            refresh();
-            setTab("propuestas");
-          }}
-        />
-      ) : null}
     </div>
   );
 }
@@ -586,142 +527,6 @@ function StoneCard({
   );
 }
 
-function GenerateModal({
-  stoneIds,
-  onClose,
-  onCreated,
-}: {
-  stoneIds: string[];
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [clientName, setClientName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [url, setUrl] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [pending, startTransition] = useTransition();
-
-  const generate = () => {
-    startTransition(async () => {
-      const p = await createProposalAction(clientName, stoneIds, whatsapp);
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      setUrl(`${origin}/p/${p.token}`);
-      onCreated();
-    });
-  };
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* sin clipboard */
-    }
-  };
-
-  return (
-    <div
-      className="no-print fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,24,20,0.45)] p-4 backdrop-blur-sm"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-md rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card-hover)]">
-        <h3 className="text-[18px] font-semibold text-[var(--on-surface)]">
-          Armar propuesta
-        </h3>
-        <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-          {stoneIds.length}{" "}
-          {stoneIds.length === 1 ? "piedra seleccionada" : "piedras seleccionadas"}.
-          Tu cliente verá imagen y specs (sin precio) y podrá señalar la que le
-          interese.
-        </p>
-
-        {!url ? (
-          <>
-            <label className="mt-4 block">
-              <span className="label-caps mb-1.5 block text-[9px] text-[var(--outline)]">
-                Nombre del cliente
-              </span>
-              <input
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="Andrea"
-                className="w-full rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] px-3 py-2 text-[14px] text-[var(--on-surface)] outline-none placeholder:text-[var(--outline-variant)] focus:border-[var(--gold)]"
-              />
-            </label>
-            <label className="mt-3 block">
-              <span className="label-caps mb-1.5 block text-[9px] text-[var(--outline)]">
-                Tu WhatsApp · para el aviso del cliente
-              </span>
-              <div className="flex items-center overflow-hidden rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] focus-within:border-[var(--gold)]">
-                <span className="border-r border-[var(--hairline)] px-3 py-2 text-[13px] text-[var(--on-surface-variant)]">
-                  🇲🇽 +52
-                </span>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="55 0000 0000"
-                  className="tabular w-full bg-transparent px-3 py-2 text-[14px] text-[var(--on-surface)] outline-none placeholder:text-[var(--outline-variant)]"
-                />
-              </div>
-              <span className="mt-1 block text-[10.5px] text-[var(--outline)]">
-                Cuando tu cliente marque una pieza, te llega un WhatsApp con cuál
-                le gustó.
-              </span>
-            </label>
-            <button
-              type="button"
-              onClick={generate}
-              disabled={pending}
-              className="mt-5 w-full rounded-[8px] bg-[var(--primary)] py-3 text-[13px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {pending ? "Generando…" : "Generar link"}
-            </button>
-          </>
-        ) : (
-          <div className="mt-4">
-            <p className="label-caps text-[9px] text-[var(--outline)]">
-              Link para tu cliente
-            </p>
-            <div className="mt-1.5 flex items-center gap-2 rounded-[8px] border border-[var(--hairline)] bg-[var(--surface-low)] px-3 py-2">
-              <span className="tabular flex-1 truncate text-[12px] text-[var(--on-surface)]">
-                {url}
-              </span>
-              <button
-                type="button"
-                onClick={copy}
-                className="label-caps shrink-0 rounded-[5px] border border-[var(--hairline)] px-2 py-1 text-[9px] text-[var(--on-surface-variant)] hover:border-[var(--gold)]"
-              >
-                {copied ? "Copiado" : "Copiar"}
-              </button>
-            </div>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 block w-full rounded-[8px] border border-[var(--gold)] py-2.5 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-            >
-              Abrir como lo verá tu cliente →
-            </a>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={onClose}
-          className="mt-3 w-full py-1.5 text-center text-[12.5px] text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
-        >
-          Cerrar
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /* ----------------------------- seguimiento -------------------------------- */
 
