@@ -43,10 +43,10 @@ function toggle(set: Multi, value: string): Multi {
   return next;
 }
 
-/** Handoff al simulador: una o varias piedras por id. */
+/** Handoff al cotizador: una o varias piedras por id. */
 function simulatorHref(stoneIds: string | string[]): string {
   const ids = Array.isArray(stoneIds) ? stoneIds.join(",") : stoneIds;
-  return `/?stones=${encodeURIComponent(ids)}`;
+  return `/cotizador?stones=${encodeURIComponent(ids)}`;
 }
 
 export function InventoryBrowser({
@@ -187,7 +187,7 @@ export function InventoryBrowser({
         </div>
         <div className="flex items-center gap-4">
           <Link
-            href="/"
+            href="/cotizador"
             className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
           >
             Cotizador

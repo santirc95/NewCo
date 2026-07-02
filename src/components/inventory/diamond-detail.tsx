@@ -225,7 +225,7 @@ export function DiamondDetail({
                   : "Agregar a propuesta"}
             </button>
             <Link
-              href={`/?stones=${stone.id}`}
+              href={`/cotizador?stones=${stone.id}`}
               className="flex-1 rounded-[10px] border border-[var(--gold)] py-3 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
             >
               Simular importación

@@ -1,14 +1,9 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { repo } from "@/lib/repo";
-import { Simulator } from "@/components/simulator";
 
+// Landing: redirige por rol. (El middleware ya exige sesión.)
 export default async function Home() {
   const session = await auth();
-  const user = session?.user ?? null;
-  const jeweler = user?.jewelerId ? await repo.getJeweler(user.jewelerId) : null;
-  return (
-    <main className="flex-1">
-      <Simulator user={user} displayName={jeweler?.name} />
-    </main>
-  );
+  if (session?.user?.role === "admin") redirect("/admin");
+  redirect("/inventario");
 }

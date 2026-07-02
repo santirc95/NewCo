@@ -42,7 +42,7 @@ function toOp(raw: RawOp): OpParams {
   };
 }
 
-export function Simulator({
+export function Cotizador({
   user,
   displayName,
 }: {
@@ -128,37 +128,34 @@ export function Simulator({
       : "—";
 
   return (
-    <div
-      ref={scope}
-      className="relative z-10 mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10"
-    >
+    <div ref={scope} className="relative z-10">
       <header
         data-animate="head"
-        className="relative z-40 mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        className="no-print sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-[var(--hairline)] bg-[var(--bg)]/85 px-5 py-3 backdrop-blur-md sm:px-8"
       >
         <div className="flex items-center gap-3">
           <div
-            className="grid h-10 w-10 place-items-center rounded-[5px] bg-[var(--primary)] text-[15px] font-bold text-[var(--on-primary)] ring-1 ring-inset ring-[var(--gold)]/30 shadow-[0_4px_14px_-6px_rgba(26,21,16,0.6)]"
+            className="grid h-8 w-8 place-items-center rounded-[4px] bg-[var(--primary)] text-[13px] font-bold text-[var(--on-primary)] ring-1 ring-inset ring-[var(--gold)]/30"
             aria-hidden
           >
             N
           </div>
-          <div>
-            <h1 className="text-[17px] font-bold leading-tight text-[var(--on-surface)]">
-              NewCo
-            </h1>
-            <p className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-              Simulador de adquisición · lo que pagas a NewCo
-            </p>
-          </div>
+          <span className="text-[15px] font-bold text-[var(--on-surface)]">
+            NewCo
+          </span>
+          <nav className="ml-3 flex items-center gap-3">
+            <Link
+              href="/inventario"
+              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Inventario
+            </Link>
+            <span className="label-caps text-[9px] text-[var(--on-surface)]">
+              Cotizador
+            </span>
+          </nav>
         </div>
-        <div className="no-print flex items-center gap-4">
-          <Link
-            href="/inventario"
-            className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-          >
-            ← Inventario
-          </Link>
+        <div className="flex items-center gap-3">
           <Button variant="solid" onClick={() => window.print()}>
             <PrintIcon />
             Export PDF
@@ -167,21 +164,27 @@ export function Simulator({
         </div>
       </header>
 
-      <div
-        data-animate="head"
-        className="mb-6 flex flex-wrap items-center gap-3 border-b border-[var(--hairline)] pb-5"
-      >
-        <span className="text-[15px] font-semibold text-[var(--on-surface)]">
-          {identity}
-        </span>
-        {!multi && stones[0] ? (
-          <span className="tabular rounded-[2px] border border-[var(--hairline)] bg-[var(--surface-low)] px-2.5 py-1 text-[11.5px] text-[var(--on-surface-variant)]">
-            {stones[0].certNumber}
-          </span>
-        ) : null}
-      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div
+          data-animate="head"
+          className="mb-6 flex flex-wrap items-end justify-between gap-3 border-b border-[var(--hairline)] pb-5"
+        >
+          <div>
+            <div className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+              Cotizador de importación
+            </div>
+            <span className="mt-1 block text-[18px] font-semibold text-[var(--on-surface)]">
+              {identity}
+            </span>
+          </div>
+          {!multi && stones[0] ? (
+            <span className="tabular rounded-[2px] border border-[var(--hairline)] bg-[var(--surface-low)] px-2.5 py-1 text-[11.5px] text-[var(--on-surface-variant)]">
+              {stones[0].certNumber}
+            </span>
+          ) : null}
+        </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="no-print lg:col-span-5 xl:col-span-4">
           <div className="lg:sticky lg:top-8">
             <OperationCard
@@ -213,11 +216,12 @@ export function Simulator({
             price={quote.price}
           />
         </div>
-      </div>
+        </div>
 
-      <footer className="no-print mt-10 label-caps text-center text-[9px] text-[var(--outline)]">
-        Etapa 1 · NewCo importador de registro · IVA acreditable, no es pasivo
-      </footer>
+        <footer className="no-print mt-10 label-caps text-center text-[9px] text-[var(--outline)]">
+          Etapa 1 · NewCo importador de registro · IVA acreditable, no es pasivo
+        </footer>
+      </div>
     </div>
   );
 }

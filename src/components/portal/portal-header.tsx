@@ -57,7 +57,7 @@ export function PortalHeader({
               <NavLink href="/inventario" active={active === "inventario"}>
                 Inventario
               </NavLink>
-              <NavLink href="/" active={active === "simulador"}>
+              <NavLink href="/cotizador" active={active === "simulador"}>
                 Cotizador
               </NavLink>
             </>
