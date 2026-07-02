@@ -23,6 +23,11 @@ import {
   triggerHoldAction,
   payJewelerAction,
 } from "@/app/actions";
+import {
+  listFavoriteIdsAction,
+  addFavoriteAction,
+  removeFavoriteAction,
+} from "@/app/favorites-actions";
 
 type Multi = Set<string>;
 const MAX_SELECT = 4;
@@ -82,6 +87,40 @@ export function InventoryBrowser({
 
   const [selected, setSelected] = useState<Multi>(new Set());
   const [genOpen, setGenOpen] = useState(false);
+
+  // Favoritos (♥) con snapshot en el servidor.
+  const [favIds, setFavIds] = useState<Multi>(new Set());
+  const [, startFav] = useTransition();
+  useEffect(() => {
+    listFavoriteIdsAction()
+      .then((ids) => setFavIds(new Set(ids)))
+      .catch(() => {});
+  }, []);
+  const toggleFav = (id: string) => {
+    const has = favIds.has(id);
+    setFavIds((prev) => {
+      const next = new Set(prev);
+      if (has) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    startFav(async () => {
+      if (has) await removeFavoriteAction(id);
+      else await addFavoriteAction(id);
+    });
+  };
+
+  // Handoff desde el detalle: ?add=<id> preselecciona la piedra.
+  useEffect(() => {
+    const add = new URLSearchParams(window.location.search).get("add");
+    if (!add || !getMockStone(add)) return;
+    setSelected((prev) => {
+      if (prev.has(add) || prev.size >= MAX_SELECT) return prev;
+      const next = new Set(prev);
+      next.add(add);
+      return next;
+    });
+  }, []);
 
   // seguimiento de propuestas (polling al store del servidor)
   const [proposals, setProposals] = useState<TrackedProposal[]>([]);
@@ -261,6 +300,8 @@ export function InventoryBrowser({
                     selected={selected.has(d.id)}
                     disabled={!selected.has(d.id) && selected.size >= MAX_SELECT}
                     onToggle={() => toggleSelect(d.id)}
+                    favorite={favIds.has(d.id)}
+                    onToggleFav={() => toggleFav(d.id)}
                   />
                 ))}
               </div>
@@ -440,19 +481,40 @@ function RangeInput({
   );
 }
 
+function MiniHeart({ active }: { active: boolean }) {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill={active ? "var(--secondary)" : "none"}
+      stroke={active ? "var(--secondary)" : "var(--on-surface-variant)"}
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />
+    </svg>
+  );
+}
+
 function StoneCard({
   stone,
   priceUsd,
   selected,
   disabled,
   onToggle,
+  favorite,
+  onToggleFav,
 }: {
   stone: Stone;
   priceUsd: number;
   selected: boolean;
   disabled: boolean;
   onToggle: () => void;
+  favorite: boolean;
+  onToggleFav: () => void;
 }) {
+  const detailHref = `/inventario/${stone.id}`;
   return (
     <div
       className={`flex flex-col gap-3 rounded-xl border bg-[var(--surface)] p-4 transition-all duration-150 ${
@@ -461,13 +523,26 @@ function StoneCard({
           : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
       }`}
     >
-      <GemTile
-        shape={stone.shape}
-        size={88}
-        photoUrl={stone.photoUrl}
-        className="aspect-square w-full"
-      />
-      <div>
+      <div className="relative">
+        <Link href={detailHref} className="block">
+          <GemTile
+            shape={stone.shape}
+            size={88}
+            photoUrl={stone.photoUrl}
+            className="aspect-square w-full"
+          />
+        </Link>
+        <button
+          type="button"
+          onClick={onToggleFav}
+          aria-pressed={favorite}
+          aria-label={favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+          className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full border border-[var(--hairline)] bg-[var(--surface)]/90 backdrop-blur transition-transform hover:scale-105"
+        >
+          <MiniHeart active={favorite} />
+        </button>
+      </div>
+      <Link href={detailHref} className="block">
         <div className="tabular text-[18px] font-semibold text-[var(--on-surface)]">
           {stone.carat.toFixed(2)}{" "}
           <span className="text-[12px] font-normal text-[var(--on-surface-variant)]">
@@ -494,7 +569,7 @@ function StoneCard({
             ● hold {stone.holdWindowHours}h
           </span>
         </div>
-      </div>
+      </Link>
       <div className="mt-auto flex items-baseline justify-between border-t border-[var(--hairline)] pt-2.5">
         <span className="label-caps text-[9px] text-[var(--outline)]">
           Precio all-in
