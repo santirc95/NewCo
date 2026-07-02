@@ -206,7 +206,7 @@ function Row({
       <span className="flex items-center gap-1.5 text-[var(--on-surface-variant)]">
         {label}
         {tag ? (
-          <span className="label-caps rounded-[2px] border border-[var(--hairline)] px-1 py-0.5 text-[8px] text-[var(--on-surface-variant)]">
+          <span className="label-caps rounded-[2px] bg-[rgba(95,163,130,0.15)] px-1 py-0.5 text-[8px] text-[#3f7a5e]">
             {tag}
           </span>
         ) : null}

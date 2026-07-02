@@ -71,7 +71,7 @@ function LedgerRow({
               "label-caps shrink-0 rounded-[2px] px-1.5 py-0.5 text-[9px]",
               isTotal
                 ? "bg-white/20 text-white"
-                : "border border-[var(--hairline)] text-[var(--on-surface-variant)]",
+                : "bg-[rgba(95,163,130,0.15)] text-[#3f7a5e]",
             )}
           >
             {tag}
