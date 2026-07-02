@@ -12,6 +12,6 @@ export const PORTAL_SECTIONS: PortalSection[] = [
   { href: "/portal/compras", label: "Compras", soon: true },
   { href: "/portal/direcciones", label: "Direcciones", soon: true },
   { href: "/portal/pagos", label: "Métodos de pago", soon: true },
-  { href: "/portal/favoritos", label: "Favoritos", soon: true },
+  { href: "/favoritos", label: "Favoritos" },
   { href: "/portal/branding", label: "Branding", soon: true },
 ];

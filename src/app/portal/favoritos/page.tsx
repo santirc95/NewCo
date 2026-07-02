@@ -1,11 +1,5 @@
-import { ComingSoon } from "@/components/portal/coming-soon";
+import { redirect } from "next/navigation";
 
-export default function FavoritosPortalPage() {
-  return (
-    <ComingSoon
-      title="Favoritos"
-      description="Tus diamantes marcados, con revalidación de disponibilidad."
-      phase="Fase E"
-    />
-  );
+export default function PortalFavoritosRedirect() {
+  redirect("/favoritos");
 }
