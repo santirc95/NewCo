@@ -16,14 +16,25 @@ import { createProposalAction } from "@/app/actions";
 export function SelectionTray() {
   const sel = useSelection();
   const [genOpen, setGenOpen] = useState(false);
+  const [created, setCreated] = useState(false);
+  const hasSel = sel.selected.length > 0;
 
-  if (sel.selected.length === 0) return null;
+  // Vaciar sólo al cerrar el modal (y sólo si se creó): así el modal no se
+  // desmonta al generar el link.
+  const closeModal = () => {
+    setGenOpen(false);
+    if (created) {
+      sel.clear();
+      setCreated(false);
+    }
+  };
 
   const href = `/cotizador?stones=${encodeURIComponent(sel.selected.join(","))}`;
 
   return (
     <>
-      <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface)]/95 px-5 py-3 backdrop-blur-md sm:px-8">
+      {hasSel ? (
+        <div className="no-print fixed inset-x-0 bottom-0 z-40 border-t border-[var(--hairline)] bg-[var(--surface)]/95 px-5 py-3 backdrop-blur-md sm:px-8">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex">
@@ -71,13 +82,14 @@ export function SelectionTray() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      ) : null}
 
       {genOpen ? (
         <GenerateModal
           stoneIds={sel.selected}
-          onClose={() => setGenOpen(false)}
-          onCreated={() => sel.clear()}
+          onClose={closeModal}
+          onCreated={() => setCreated(true)}
         />
       ) : null}
     </>
