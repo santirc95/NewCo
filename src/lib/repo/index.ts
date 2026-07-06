@@ -9,6 +9,10 @@ import type {
   Hold,
   Order,
   OrderStage,
+  ImportMethod,
+  Shipment,
+  ShipmentStatus,
+  Settings,
   Quote,
   Stone,
 } from "@/lib/types";
@@ -29,57 +33,100 @@ export interface CreateProposalInput {
   jewelerWhatsapp?: string;
 }
 
-export interface RecordPaymentInput {
+export interface ProposalPatch {
+  clientName?: string;
+  stoneIds?: string[];
+  signaledStoneId?: string;
+}
+
+/** Confirmar la orden = piedra en firme + hold (aún SIN método ni pago). */
+export interface ConfirmOrderInput {
   token: string;
-  stoneIds: string[];
-  paymentRef: string;
+  stoneId: string;
+  stoneSnapshot: Partial<Stone>;
+  quoteSnapshot: Quote; // cotización standalone provisional
   totalUsd: number;
-  quoteSnapshot: Quote;
-  stoneSnapshots: Partial<Stone>[];
 }
 
 /**
- * Capa de datos de NewCo. Toda la persistencia pasa por aquí para poder migrar
- * de memoria → Airtable sin reescribir la app. Métodos ASÍNCRONOS (Airtable lo
- * es). El inventario del proveedor NO vive aquí (viene de su API).
+ * OPCIÓN A: al elegir método el joyero PAGA; después NewCo compra al proveedor
+ * y se suelta el hold. Si es consolidada, la orden entra al embarque.
+ */
+export interface PayOrderInput {
+  orderId: string;
+  method: ImportMethod;
+  paymentRef: string;
+  shipmentId?: string;
+  /** Cotización al momento del pago (proyección si es consolidada). */
+  quoteSnapshot?: Quote;
+}
+
+/**
+ * Capa de datos de NewCo (v4). Toda la persistencia pasa por aquí para migrar
+ * de memoria → Airtable sin reescribir la app. Métodos ASÍNCRONOS. El
+ * inventario del proveedor NO vive aquí (viene de su API).
  */
 export interface Repo {
   // Joyeros
   getJeweler(id: string): Promise<Jeweler | undefined>;
   listJewelers(): Promise<Jeweler[]>;
+  createJeweler(data: Omit<Jeweler, "id" | "createdAt">): Promise<Jeweler>;
   updateJewelerProfile(
     id: string,
     patch: JewelerProfilePatch,
   ): Promise<Jeweler | undefined>;
   setJewelerActive(id: string, active: boolean): Promise<Jeweler | undefined>;
+  setJewelerApproved(
+    id: string,
+    approved: boolean,
+  ): Promise<Jeweler | undefined>;
 
   // Bandas de margen
   listBands(): Promise<MarginBand[]>;
   saveBands(bands: MarginBand[]): Promise<MarginBand[]>;
 
-  // Propuestas / holds
+  // Config (leyendas / corte — editable por admin)
+  getSettings(): Promise<Settings>;
+  saveSettings(patch: Partial<Settings>): Promise<Settings>;
+
+  // Propuestas
   createProposal(input: CreateProposalInput): Promise<Proposal>;
   getProposal(token: string): Promise<Proposal | undefined>;
+  updateProposal(
+    token: string,
+    patch: ProposalPatch,
+  ): Promise<Proposal | undefined>;
   listProposals(jewelerId?: string): Promise<ProposalView[]>;
   viewProposal(token: string): Promise<ProposalView | undefined>;
   signalInterest(token: string, stoneId: string): Promise<Proposal | undefined>;
-  triggerHold(
-    token: string,
-    stoneIds: string[],
-  ): Promise<ProposalView | undefined>;
 
-  // Pago + órdenes
-  recordPaymentAndOrder(
-    input: RecordPaymentInput,
-  ): Promise<{ proposal: Proposal; order: Order } | undefined>;
-  confirmOrderWithSupplier(orderId: string): Promise<Order | undefined>;
+  // Órdenes (Opción A)
+  confirmOrder(
+    input: ConfirmOrderInput,
+  ): Promise<{ proposal: Proposal; order: Order; hold: Hold } | undefined>;
+  payOrder(input: PayOrderInput): Promise<Order | undefined>;
   advanceOrder(
     orderId: string,
     stage: OrderStage,
     note?: string,
   ): Promise<Order | undefined>;
+  confirmFinalCost(orderId: string): Promise<Order | undefined>;
   listOrders(jewelerId: string): Promise<Order[]>;
   getOrder(orderId: string): Promise<Order | undefined>;
+
+  // Embarques (el barco semanal)
+  listShipments(): Promise<Shipment[]>;
+  getShipment(id: string): Promise<Shipment | undefined>;
+  getOpenShipment(): Promise<Shipment | undefined>;
+  createShipment(weekLabel: string, cutoffAt: string): Promise<Shipment>;
+  closeShipment(
+    id: string,
+    frozen: { frozenLogiMxn: number; frozenAgenteMxn: number },
+  ): Promise<Shipment | undefined>;
+  advanceShipmentStatus(
+    id: string,
+    status: ShipmentStatus,
+  ): Promise<Shipment | undefined>;
 
   // Direcciones
   listAddresses(jewelerId: string): Promise<ShippingAddress[]>;

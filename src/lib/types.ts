@@ -75,6 +75,8 @@ export interface Jeweler {
   branding?: { logoUrl?: string; logoText: string };
   // Administrado por NewCo:
   active: boolean;
+  /** Nuevos usuarios por invitación requieren aprobación de admin. */
+  approved: boolean;
   createdAt: string;
 }
 
@@ -186,12 +188,14 @@ export interface Quote {
 
 /* -------------------------- propuestas / holds / órdenes ------------------ */
 
+/** enviada → señalada → confirmada → en_embarque | importando → entregada. */
 export type ProposalStatus =
   | "enviada"
   | "señalada"
-  | "en_hold"
-  | "pagada"
-  | "ordenada";
+  | "confirmada"
+  | "en_embarque"
+  | "importando"
+  | "entregada";
 
 /** Tabla "Propuestas". */
 export interface Proposal {
@@ -219,11 +223,12 @@ export interface Hold {
   status: HoldStatus;
 }
 
-/** Etapas de trazabilidad de una orden. */
+/** Etapas de trazabilidad de una orden (v4 — Opción A). */
 export type OrderStage =
-  | "orden_creada"
+  | "confirmada"
   | "pago_confirmado"
-  | "confirmado_proveedor"
+  | "comprada_proveedor"
+  | "en_embarque"
   | "en_transito"
   | "en_aduana"
   | "nacionalizado"
@@ -235,16 +240,54 @@ export interface OrderStatus {
   note?: string;
 }
 
-/** Tabla "Ordenes". Snapshots inmutables + trazabilidad. Alimenta lealtad (Cap.2). */
+/** Método de importación elegido tras confirmar la orden. */
+export type ImportMethod = "directa" | "consolidada";
+
+/**
+ * Tabla "Ordenes" — UNA piedra CONFIRMADA a importar. Snapshots inmutables +
+ * trazabilidad. Alimenta el programa de lealtad (Cap.2).
+ */
 export interface Order {
   id: string;
   jewelerId: string;
   proposalId: string;
-  stoneSnapshots: Partial<Stone>[];
+  stoneSnapshot: Partial<Stone>;
   quoteSnapshot: Quote;
   totalUsd: number;
-  jewelerPaymentRef: string;
+  /** Hold vigente mientras el joyero decide el método (puente corto). */
+  holdId?: string;
+  importMethod?: ImportMethod;
+  /** Si va consolidada, el embarque al que pertenece. */
+  shipmentId?: string;
+  jewelerPaymentRef?: string;
   folio?: string; // folio de factura secuencial e inmutable al emitir
+  /** El joyero confirmó su costo final al cierre del embarque. */
+  finalCostConfirmed?: boolean;
   tracking: OrderStatus[];
   createdAt: string;
+}
+
+/* ------------------------------- embarques -------------------------------- */
+
+export type ShipmentStatus = "abierto" | "cerrado" | "en_transito" | "entregado";
+
+/** Tabla "Embarques" — el barco semanal (ES un simulador vivo). */
+export interface Shipment {
+  id: string;
+  weekLabel: string;
+  /** Corte semanal (editable por admin). */
+  cutoffAt: string;
+  status: ShipmentStatus;
+  /** Órdenes consolidadas (de varios joyeros). */
+  orderIds: string[];
+  /** Costos fijos congelados al cierre (con el nº real de piedras). */
+  frozenLogiMxn?: number;
+  frozenAgenteMxn?: number;
+}
+
+/** Tabla "Config" — leyendas y corte, editables por admin. NO hardcodear. */
+export interface Settings {
+  shipmentDayLabel: string; // ej. "Pedidos de importación: cada jueves"
+  transitWeeks: string; // ej. "Importación de 2 a 3 semanas"
+  cutoffDayOfWeek: number; // 0=domingo … 4=jueves
 }

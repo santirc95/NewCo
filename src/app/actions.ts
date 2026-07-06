@@ -5,8 +5,8 @@ import { repo, type ProposalView } from "@/lib/repo";
 import { notifier, supplier } from "@/lib/notify";
 import { payments } from "@/lib/payments";
 import { getMockStone } from "@/lib/inventory";
-import { computeQuote, lineFromStone, DEFAULT_OP } from "@/lib/quote";
-import type { Proposal } from "@/lib/types";
+import { quoteStones, DEFAULT_OP } from "@/lib/quote";
+import type { ImportMethod, Proposal } from "@/lib/types";
 
 async function currentJewelerId(): Promise<string | undefined> {
   const s = await auth();
@@ -29,7 +29,7 @@ export async function createProposalAction(
   });
 }
 
-/** El cliente final señala interés → notifica al joyero (mock). */
+/** El cliente final señala interés (puede cambiar dentro del mismo set). */
 export async function signalInterestAction(
   token: string,
   stoneId: string,
@@ -39,50 +39,59 @@ export async function signalInterestAction(
   return p ?? null;
 }
 
-/** El joyero dispara el hold sobre la piedra señalada. */
-export async function triggerHoldAction(
-  token: string,
-  stoneId: string,
-): Promise<ProposalView | null> {
-  return (await repo.triggerHold(token, [stoneId])) ?? null;
-}
-
 /**
- * Cobra al joyero y, SOLO DESPUÉS, confirma la orden con el proveedor.
- * Crea la Order con snapshots inmutables (piedra + cotización) + folio.
+ * El joyero pone la ORDEN EN FIRME: crea la Order (etapa "confirmada") con
+ * snapshots y deja la piedra en hold. Elegir método y pagar es el paso
+ * siguiente (Opción A).
  */
-export async function payJewelerAction(
+export async function confirmOrderAction(
   token: string,
   stoneId: string,
 ): Promise<ProposalView | null> {
   const stone = getMockStone(stoneId);
   if (!stone) return null;
-
-  // Cotización inmutable al momento del pago (bandas vivas del store).
   const bands = await repo.listBands();
-  const quote = computeQuote(
-    [lineFromStone(stone, null, bands)],
-    DEFAULT_OP,
-  );
+  const quote = quoteStones([stone], DEFAULT_OP, null, bands);
+  await repo.confirmOrder({
+    token,
+    stoneId,
+    stoneSnapshot: { ...stone },
+    quoteSnapshot: quote,
+    totalUsd: stone.supplierPriceUsd,
+  });
+  return (await repo.viewProposal(token)) ?? null;
+}
+
+/**
+ * OPCIÓN A: al elegir el método el joyero PAGA; con el pago confirmado NewCo
+ * compra al proveedor (regla de oro) y se suelta el hold. Si es consolidada,
+ * la orden se suma al embarque abierto.
+ */
+export async function payOrderAction(
+  token: string,
+  method: ImportMethod,
+): Promise<ProposalView | null> {
+  const view = await repo.viewProposal(token);
+  const order = view?.order;
+  if (!order) return null;
+
+  const shipment =
+    method === "consolidada" ? await repo.getOpenShipment() : undefined;
+  if (method === "consolidada" && !shipment) return null; // sin barco abierto
 
   // 1) Cobro al joyero (NewCo como principal).
-  const pay = await payments.charge(quote.allin);
+  const pay = await payments.charge(order.quoteSnapshot.allin);
   if (pay.status !== "confirmado") return null;
 
-  // 2) Pago confirmado → crear Order con snapshots + folio.
-  const r = await repo.recordPaymentAndOrder({
-    token,
-    stoneIds: [stoneId],
+  // 2) Pago confirmado → método + folio + compra al proveedor + hold suelto.
+  const paid = await repo.payOrder({
+    orderId: order.id,
+    method,
     paymentRef: pay.ref,
-    totalUsd: stone.supplierPriceUsd,
-    quoteSnapshot: quote,
-    stoneSnapshots: [{ ...stone }],
+    shipmentId: shipment?.id,
   });
-  if (!r) return null;
-
-  // 3) Con el pago en mano, confirmar con el proveedor.
-  supplier.confirmOrder(stoneId);
-  await repo.confirmOrderWithSupplier(r.order.id);
+  if (!paid) return null;
+  supplier.confirmOrder(order.stoneSnapshot.id ?? "");
 
   return (await repo.viewProposal(token)) ?? null;
 }

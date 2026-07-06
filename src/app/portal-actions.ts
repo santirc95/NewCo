@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { repo } from "@/lib/repo";
-import { STAGE_SEQUENCE } from "@/lib/order-stages";
+import { stagesForMethod } from "@/lib/order-stages";
 import type {
   Jeweler,
   JewelerProfilePatch,
@@ -104,10 +104,14 @@ export async function advanceOrderAction(orderId: string): Promise<Order | null>
   const id = await requireJewelerId();
   const order = await repo.getOrder(orderId);
   if (!order || order.jewelerId !== id) return null;
+  // Sólo avanza tras elegir método y pagar (Opción A).
+  if (!order.importMethod) return order;
   const done = new Set(order.tracking.map((t) => t.stage));
-  const next = STAGE_SEQUENCE.find((s) => !done.has(s));
+  const next = stagesForMethod(order.importMethod).find(
+    (s) => !done.has(s.stage),
+  );
   if (!next) return order;
-  return (await repo.advanceOrder(orderId, next)) ?? null;
+  return (await repo.advanceOrder(orderId, next.stage)) ?? null;
 }
 
 /* ------------------------------ direcciones ------------------------------- */

@@ -57,9 +57,9 @@ export default async function ComprasPage() {
                   </div>
                   <div className="tabular mt-1 text-[11.5px] text-[var(--on-surface-variant)]">
                     {fecha(o.createdAt)} ·{" "}
-                    {o.stoneSnapshots.length === 1
-                      ? "1 diamante"
-                      : `${o.stoneSnapshots.length} diamantes`}
+                    {(o.stoneSnapshot.carat ?? 0).toFixed(2)} ct ·{" "}
+                    {o.stoneSnapshot.shape}
+                    {o.importMethod ? ` · ${o.importMethod}` : ""}
                   </div>
                 </div>
                 <div className="text-right">

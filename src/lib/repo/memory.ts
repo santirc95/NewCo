@@ -9,6 +9,9 @@ import type {
   Hold,
   Order,
   OrderStage,
+  Shipment,
+  ShipmentStatus,
+  Settings,
 } from "@/lib/types";
 import { DEFAULT_BANDS } from "@/lib/quote";
 import { getMockStone } from "@/lib/inventory";
@@ -16,26 +19,34 @@ import type {
   Repo,
   ProposalView,
   CreateProposalInput,
-  RecordPaymentInput,
+  ProposalPatch,
+  ConfirmOrderInput,
+  PayOrderInput,
 } from "./index";
 
 /**
- * Implementación EN MEMORIA de la capa de datos (globalThis para sobrevivir HMR).
- * Suficiente para el demo local; no persiste en serverless multi-instancia.
+ * Implementación EN MEMORIA de la capa de datos v4 (globalThis para sobrevivir
+ * HMR). Suficiente para el demo local; no persiste en serverless multi-instancia.
  * // TODO Cap.2: la implementación real es `airtable.ts`.
  */
 
 interface DB {
   jewelers: Map<string, Jeweler>;
   bands: MarginBand[];
+  settings: Settings;
   proposals: Map<string, Proposal>;
   holds: Hold[];
   orders: Order[];
+  shipments: Shipment[];
   addresses: ShippingAddress[];
   payments: PaymentMethod[];
   favorites: Favorite[];
   folioSeq: number;
 }
+
+const uid = () => crypto.randomUUID();
+const shortId = (p: string) => `${p}-${uid().slice(0, 8)}`;
+const now = () => new Date().toISOString();
 
 function seedJewelers(): Map<string, Jeweler> {
   const m = new Map<string, Jeweler>();
@@ -57,30 +68,63 @@ function seedJewelers(): Map<string, Jeweler> {
       cp: "11560",
     },
     active: true,
-    createdAt: new Date().toISOString(),
+    approved: true,
+    createdAt: now(),
   });
   return m;
 }
 
-// Llave versionada: al cambiar el modelo, re-siembra sin arrastrar datos viejos.
-const g = globalThis as unknown as { __newcoDbV3?: DB };
-const db: DB =
-  g.__newcoDbV3 ??
-  (g.__newcoDbV3 = {
-    jewelers: seedJewelers(),
-    bands: DEFAULT_BANDS.map((b) => ({ ...b })),
-    proposals: new Map(),
-    holds: [],
-    orders: [],
-    addresses: [],
-    payments: [],
-    favorites: [],
-    folioSeq: 0,
-  });
+/** Próximo corte según el día configurado (default jueves 18:00). */
+function nextCutoff(dayOfWeek: number): string {
+  const d = new Date();
+  const diff = (dayOfWeek - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  d.setHours(18, 0, 0, 0);
+  return d.toISOString();
+}
 
-const uid = () => crypto.randomUUID();
-const shortId = (p: string) => `${p}-${uid().slice(0, 8)}`;
-const now = () => new Date().toISOString();
+function seedShipments(settings: Settings): Shipment[] {
+  const cutoffAt = nextCutoff(settings.cutoffDayOfWeek);
+  const label = new Date(cutoffAt).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "long",
+  });
+  return [
+    {
+      id: shortId("EMB"),
+      weekLabel: `Embarque · corte ${label}`,
+      cutoffAt,
+      status: "abierto",
+      orderIds: [],
+    },
+  ];
+}
+
+const SEED_SETTINGS: Settings = {
+  shipmentDayLabel: "Pedidos de importación: cada jueves",
+  transitWeeks: "Importación de 2 a 3 semanas",
+  cutoffDayOfWeek: 4,
+};
+
+const g = globalThis as unknown as { __newcoDbV4?: DB };
+const db: DB =
+  g.__newcoDbV4 ??
+  (g.__newcoDbV4 = (() => {
+    const settings = { ...SEED_SETTINGS };
+    return {
+      jewelers: seedJewelers(),
+      bands: DEFAULT_BANDS.map((b) => ({ ...b })),
+      settings,
+      proposals: new Map(),
+      holds: [],
+      orders: [],
+      shipments: seedShipments(settings),
+      addresses: [],
+      payments: [],
+      favorites: [],
+      folioSeq: 0,
+    };
+  })());
 
 function activeHold(proposalId: string): Hold | null {
   return (
@@ -91,6 +135,9 @@ function activeHold(proposalId: string): Hold | null {
 }
 function orderOfProposal(proposalId: string): Order | null {
   return db.orders.find((o) => o.proposalId === proposalId) ?? null;
+}
+function proposalOfOrder(order: Order): Proposal | undefined {
+  return [...db.proposals.values()].find((p) => p.id === order.proposalId);
 }
 function nextFolio(): string {
   db.folioSeq += 1;
@@ -108,6 +155,11 @@ export const memoryRepo: Repo = {
       a.createdAt.localeCompare(b.createdAt),
     );
   },
+  async createJeweler(data) {
+    const j: Jeweler = { ...data, id: shortId("JWL"), createdAt: now() };
+    db.jewelers.set(j.id, j);
+    return j;
+  },
   async updateJewelerProfile(id, patch: JewelerProfilePatch) {
     const j = db.jewelers.get(id);
     if (!j) return undefined;
@@ -123,6 +175,12 @@ export const memoryRepo: Repo = {
     j.active = active;
     return j;
   },
+  async setJewelerApproved(id, approved) {
+    const j = db.jewelers.get(id);
+    if (!j) return undefined;
+    j.approved = approved;
+    return j;
+  },
 
   /* -------------------------------- bandas ------------------------------- */
   async listBands() {
@@ -133,6 +191,15 @@ export const memoryRepo: Repo = {
       .map((b) => ({ ...b }))
       .sort((a, b) => a.minValueUsd - b.minValueUsd);
     return db.bands.map((b) => ({ ...b }));
+  },
+
+  /* -------------------------------- config ------------------------------- */
+  async getSettings() {
+    return { ...db.settings };
+  },
+  async saveSettings(patch) {
+    Object.assign(db.settings, patch);
+    return { ...db.settings };
   },
 
   /* ------------------------------ propuestas ----------------------------- */
@@ -154,6 +221,27 @@ export const memoryRepo: Repo = {
   async getProposal(token) {
     return db.proposals.get(token);
   },
+  async updateProposal(token, patch: ProposalPatch) {
+    const p = db.proposals.get(token);
+    if (!p) return undefined;
+    if (patch.clientName !== undefined) p.clientName = patch.clientName;
+    if (patch.stoneIds) {
+      p.stoneIds = patch.stoneIds.slice(0, 4);
+      // Si la piedra señalada salió del set, se limpia la señal.
+      if (p.signaledStoneId && !p.stoneIds.includes(p.signaledStoneId)) {
+        p.signaledStoneId = undefined;
+        if (p.status === "señalada") p.status = "enviada";
+      }
+    }
+    if (
+      patch.signaledStoneId !== undefined &&
+      p.stoneIds.includes(patch.signaledStoneId)
+    ) {
+      p.signaledStoneId = patch.signaledStoneId;
+      if (p.status === "enviada") p.status = "señalada";
+    }
+    return p;
+  },
   async listProposals(jewelerId) {
     return [...db.proposals.values()]
       .filter((p) => !jewelerId || p.jewelerId === jewelerId)
@@ -172,74 +260,97 @@ export const memoryRepo: Repo = {
   async signalInterest(token, stoneId) {
     const p = db.proposals.get(token);
     if (!p || !p.stoneIds.includes(stoneId)) return p;
-    p.signaledStoneId = stoneId;
-    if (p.status === "enviada") p.status = "señalada";
+    // El cliente puede cambiar su selección DENTRO del mismo set mientras la
+    // orden no esté confirmada.
+    if (p.status === "enviada" || p.status === "señalada") {
+      p.signaledStoneId = stoneId;
+      p.status = "señalada";
+    }
     return p;
   },
-  async triggerHold(token, stoneIds) {
-    const p = db.proposals.get(token);
+
+  /* --------------------------- órdenes (Opción A) ------------------------ */
+  async confirmOrder(input: ConfirmOrderInput) {
+    const p = db.proposals.get(input.token);
     if (!p) return undefined;
-    const windowMs = Math.min(
-      ...stoneIds.map((id) => (getMockStone(id)?.holdWindowHours ?? 48)),
-    ) *
-      3600 *
-      1000;
+    const stone = getMockStone(input.stoneId);
     const startedAt = Date.now();
+    const windowMs = (stone?.holdWindowHours ?? 48) * 3600 * 1000;
     const hold: Hold = {
       id: shortId("HLD"),
       proposalId: p.id,
-      stoneIds: [...stoneIds],
+      stoneIds: [input.stoneId],
       startedAt,
       expiresAt: startedAt + windowMs,
       status: "active",
     };
     db.holds.push(hold);
-    p.signaledStoneId = stoneIds[0] ?? p.signaledStoneId;
-    p.status = "en_hold";
-    return { proposal: p, hold, order: orderOfProposal(p.id) };
-  },
-
-  /* --------------------------- pago + órdenes ---------------------------- */
-  async recordPaymentAndOrder(input: RecordPaymentInput) {
-    const p = db.proposals.get(input.token);
-    if (!p) return undefined;
     const order: Order = {
       id: shortId("ORD"),
       jewelerId: p.jewelerId,
       proposalId: p.id,
-      stoneSnapshots: input.stoneSnapshots,
+      stoneSnapshot: input.stoneSnapshot,
       quoteSnapshot: input.quoteSnapshot,
       totalUsd: input.totalUsd,
-      jewelerPaymentRef: input.paymentRef,
-      folio: nextFolio(),
-      tracking: [
-        { stage: "orden_creada", at: now() },
-        { stage: "pago_confirmado", at: now() },
-      ],
+      holdId: hold.id,
+      tracking: [{ stage: "confirmada", at: now() }],
       createdAt: now(),
     };
     db.orders.push(order);
-    const h = activeHold(p.id);
-    if (h) h.status = "converted";
-    p.status = "pagada";
-    return { proposal: p, order };
+    p.signaledStoneId = input.stoneId;
+    p.status = "confirmada";
+    return { proposal: p, order, hold };
   },
-  async confirmOrderWithSupplier(orderId) {
-    const o = db.orders.find((x) => x.id === orderId);
+
+  async payOrder(input: PayOrderInput) {
+    const o = db.orders.find((x) => x.id === input.orderId);
     if (!o) return undefined;
-    o.tracking.push({ stage: "confirmado_proveedor", at: now() });
-    const p = db.proposals.get(
-      [...db.proposals.values()].find((x) => x.id === o.proposalId)?.token ?? "",
-    );
-    if (p) p.status = "ordenada";
+    if (input.quoteSnapshot) o.quoteSnapshot = input.quoteSnapshot;
+    o.importMethod = input.method;
+    o.jewelerPaymentRef = input.paymentRef;
+    o.folio = o.folio ?? nextFolio();
+    // Regla de oro: el pago ANTECEDE a la compra al proveedor.
+    o.tracking.push({ stage: "pago_confirmado", at: now() });
+    o.tracking.push({ stage: "comprada_proveedor", at: now() });
+    // La piedra ya es de NewCo → se suelta el hold (deja de correr el reloj).
+    const h = db.holds.find((x) => x.id === o.holdId);
+    if (h) h.status = "converted";
+    const p = proposalOfOrder(o);
+    if (input.method === "consolidada") {
+      const s =
+        db.shipments.find((x) => x.id === input.shipmentId) ??
+        db.shipments.find((x) => x.status === "abierto");
+      if (s && !s.orderIds.includes(o.id)) {
+        s.orderIds.push(o.id);
+        o.shipmentId = s.id;
+      }
+      o.tracking.push({ stage: "en_embarque", at: now() });
+      if (p) p.status = "en_embarque";
+    } else {
+      if (p) p.status = "importando";
+    }
     return o;
   },
+
   async advanceOrder(orderId, stage: OrderStage, note) {
     const o = db.orders.find((x) => x.id === orderId);
     if (!o) return undefined;
     o.tracking.push({ stage, at: now(), note });
+    const p = proposalOfOrder(o);
+    if (p) {
+      if (stage === "entregado") p.status = "entregada";
+      else if (stage === "en_transito") p.status = "importando";
+    }
     return o;
   },
+
+  async confirmFinalCost(orderId) {
+    const o = db.orders.find((x) => x.id === orderId);
+    if (!o) return undefined;
+    o.finalCostConfirmed = true;
+    return o;
+  },
+
   async listOrders(jewelerId) {
     return db.orders
       .filter((o) => o.jewelerId === jewelerId)
@@ -247,6 +358,52 @@ export const memoryRepo: Repo = {
   },
   async getOrder(orderId) {
     return db.orders.find((o) => o.id === orderId);
+  },
+
+  /* ------------------------------- embarques ----------------------------- */
+  async listShipments() {
+    return [...db.shipments].sort((a, b) =>
+      b.cutoffAt.localeCompare(a.cutoffAt),
+    );
+  },
+  async getShipment(id) {
+    return db.shipments.find((s) => s.id === id);
+  },
+  async getOpenShipment() {
+    return [...db.shipments]
+      .filter((s) => s.status === "abierto")
+      .sort((a, b) => a.cutoffAt.localeCompare(b.cutoffAt))[0];
+  },
+  async createShipment(weekLabel, cutoffAt) {
+    const s: Shipment = {
+      id: shortId("EMB"),
+      weekLabel,
+      cutoffAt,
+      status: "abierto",
+      orderIds: [],
+    };
+    db.shipments.push(s);
+    return s;
+  },
+  async closeShipment(id, frozen) {
+    const s = db.shipments.find((x) => x.id === id);
+    if (!s) return undefined;
+    s.status = "cerrado";
+    s.frozenLogiMxn = frozen.frozenLogiMxn;
+    s.frozenAgenteMxn = frozen.frozenAgenteMxn;
+    return s;
+  },
+  async advanceShipmentStatus(id, status: ShipmentStatus) {
+    const s = db.shipments.find((x) => x.id === id);
+    if (!s) return undefined;
+    s.status = status;
+    if (status === "en_transito") {
+      // El barco zarpa: todas sus órdenes pasan a tránsito.
+      for (const orderId of s.orderIds) {
+        await this.advanceOrder(orderId, "en_transito", s.weekLabel);
+      }
+    }
+    return s;
   },
 
   /* ----------------------------- direcciones ----------------------------- */

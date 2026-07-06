@@ -13,15 +13,20 @@ import {
   CUTS,
   LABS,
 } from "@/lib/inventory";
-import type { Stone, ProposalStatus, MarginBand } from "@/lib/types";
+import type {
+  Stone,
+  ProposalStatus,
+  MarginBand,
+  ImportMethod,
+} from "@/lib/types";
 import type { ProposalView as TrackedProposal } from "@/lib/repo";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 import { useSelection, MAX_SELECT } from "@/components/selection-provider";
 import {
   listProposalsAction,
-  triggerHoldAction,
-  payJewelerAction,
+  confirmOrderAction,
+  payOrderAction,
 } from "@/app/actions";
 import {
   listFavoriteIdsAction,
@@ -533,9 +538,10 @@ function StoneCard({
 const STATUS_META: Record<ProposalStatus, { label: string; cls: string }> = {
   enviada: { label: "Enviada", cls: "border-[var(--hairline)] text-[var(--on-surface-variant)]" },
   señalada: { label: "Señalada", cls: "border-[var(--gold)] text-[var(--warn-text)] bg-[var(--warn-bg)]" },
-  en_hold: { label: "Apartada", cls: "border-[#3c5a6b] text-[#5e87a0]" },
-  pagada: { label: "Pagada", cls: "border-[#3f7a5e] text-[#4f9d79]" },
-  ordenada: { label: "Ordenada", cls: "border-[#3f7a5e] text-[#4f9d79] bg-[rgba(79,157,121,0.08)]" },
+  confirmada: { label: "Confirmada", cls: "border-[#3c5a6b] text-[#5e87a0]" },
+  en_embarque: { label: "En embarque", cls: "border-[#3c5a6b] text-[#5e87a0] bg-[rgba(94,135,160,0.08)]" },
+  importando: { label: "Importando", cls: "border-[#3f7a5e] text-[#4f9d79]" },
+  entregada: { label: "Entregada", cls: "border-[#3f7a5e] text-[#4f9d79] bg-[rgba(79,157,121,0.08)]" },
 };
 
 function Countdown({ expiresAt }: { expiresAt: number }) {
@@ -566,8 +572,8 @@ function ProposalsPanel({
     <div className="mx-auto max-w-[920px] px-5 py-6 sm:px-8">
       <h1 className="text-[20px] font-bold text-[var(--on-surface)]">Propuestas</h1>
       <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-        Aquí ves la señal del cliente y avanzas: apartar (hold) → cotizar →
-        cobrar a NewCo.
+        Aquí ves la señal del cliente y avanzas: orden en firme → elegir método
+        (directa o embarque) → pagar a NewCo.
       </p>
 
       {proposals.length === 0 ? (
@@ -599,18 +605,16 @@ function ProposalRow({
     : undefined;
   const [pending, startTransition] = useTransition();
 
-  const doHold = () => {
+  const doConfirm = () => {
     if (!proposal.signaledStoneId) return;
     startTransition(async () => {
-      await triggerHoldAction(proposal.token, proposal.signaledStoneId!);
+      await confirmOrderAction(proposal.token, proposal.signaledStoneId!);
       onChanged();
     });
   };
-  const doPay = () => {
-    const stoneId = hold?.stoneIds?.[0] ?? proposal.signaledStoneId;
-    if (!stoneId) return;
+  const doPay = (method: ImportMethod) => {
     startTransition(async () => {
-      await payJewelerAction(proposal.token, stoneId);
+      await payOrderAction(proposal.token, method);
       onChanged();
     });
   };
@@ -670,47 +674,66 @@ function ProposalRow({
         </p>
       )}
 
-      {/* Acciones según estado */}
+      {/* Acciones según estado (Opción A: confirmar ≠ elegir método) */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {proposal.status === "señalada" ? (
           <button
             type="button"
-            onClick={doHold}
+            onClick={doConfirm}
             disabled={pending}
             className="rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {pending ? "Apartando…" : "Apartar (hold)"}
+            {pending ? "Confirmando…" : "Poner orden en firme"}
           </button>
         ) : null}
 
-        {hold && proposal.status === "en_hold" ? (
+        {hold && proposal.status === "confirmada" ? (
           <>
             <span className="rounded-[8px] border border-[#3c5a6b] px-3 py-2 text-[12.5px] text-[#5e87a0]">
-              Vence en <Countdown expiresAt={hold.expiresAt} />
+              Hold vence en <Countdown expiresAt={hold.expiresAt} />
             </span>
             {signaled ? (
               <Link
                 href={simulatorHref(signaled.id)}
                 className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
               >
-                Abrir en simulador →
+                Cotizar →
               </Link>
             ) : null}
             <button
               type="button"
-              onClick={doPay}
+              onClick={() => doPay("directa")}
               disabled={pending}
               className="rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {pending ? "Cobrando…" : "Registrar pago a NewCo"}
+              {pending ? "Procesando…" : "Realizar importación"}
+            </button>
+            <button
+              type="button"
+              onClick={() => doPay("consolidada")}
+              disabled={pending}
+              className="rounded-[8px] border border-[var(--gold)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50"
+            >
+              {pending ? "Procesando…" : "Agregar a embarque"}
             </button>
           </>
         ) : null}
 
-        {order ? (
+        {order?.importMethod ? (
           <span className="tabular rounded-[8px] border border-[#3f7a5e] bg-[rgba(79,157,121,0.08)] px-3 py-2 text-[12px] text-[#4f9d79]">
-            Pagada · {order.jewelerPaymentRef} → orden confirmada con proveedor
+            Pagada · {order.jewelerPaymentRef} ·{" "}
+            {order.importMethod === "consolidada"
+              ? "en embarque semanal"
+              : "importación directa"}
           </span>
+        ) : null}
+        {order ? (
+          <Link
+            href={`/portal/compras/${order.id}`}
+            className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
+          >
+            Ver orden →
+          </Link>
         ) : null}
       </div>
     </div>

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { Order, Shape } from "@/lib/types";
 import { formatMXN } from "@/lib/compute";
-import { ORDER_STAGES } from "@/lib/order-stages";
+import { stagesForMethod } from "@/lib/order-stages";
 import { GemTile } from "@/components/gem-icon";
 import { advanceOrderAction } from "@/app/portal-actions";
 
@@ -21,8 +21,9 @@ export function OrderDetail({ order: initial }: { order: Order }) {
   const [order, setOrder] = useState<Order>(initial);
   const [pending, startTransition] = useTransition();
 
+  const stages = stagesForMethod(order.importMethod);
   const trackingMap = new Map(order.tracking.map((t) => [t.stage, t]));
-  const complete = order.tracking.length >= ORDER_STAGES.length;
+  const complete = stages.every((s) => trackingMap.has(s.stage));
 
   const advance = () => {
     startTransition(async () => {
@@ -48,7 +49,11 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             {order.folio ?? order.id}
           </h1>
           <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-            {fechaHora(order.createdAt)} · pago {order.jewelerPaymentRef}
+            {fechaHora(order.createdAt)}
+            {order.jewelerPaymentRef ? ` · pago ${order.jewelerPaymentRef}` : ""}
+            {order.importMethod
+              ? ` · importación ${order.importMethod}`
+              : " · método por elegir"}
           </p>
         </div>
         <div className="text-right">
@@ -68,10 +73,10 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             Trazabilidad
           </h2>
           <ol className="mt-4">
-            {ORDER_STAGES.map((s, i) => {
+            {stages.map((s, i) => {
               const entry = trackingMap.get(s.stage);
               const done = Boolean(entry);
-              const isLast = i === ORDER_STAGES.length - 1;
+              const isLast = i === stages.length - 1;
               return (
                 <li key={s.stage} className="flex gap-3">
                   <div className="flex flex-col items-center">
@@ -108,7 +113,11 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             })}
           </ol>
 
-          {!complete ? (
+          {!order.importMethod ? (
+            <p className="mt-1 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-center text-[11.5px] text-[var(--warn-text)]">
+              Elige el método de importación y paga para avanzar (en Propuestas).
+            </p>
+          ) : !complete ? (
             <button
               type="button"
               onClick={advance}
@@ -128,27 +137,24 @@ export function OrderDetail({ order: initial }: { order: Order }) {
           {/* Piezas (snapshot inmutable) */}
           <section className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
             <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-              {order.stoneSnapshots.length === 1 ? "Diamante" : "Diamantes"}
+              Diamante
             </h2>
-            <div className="mt-3 flex flex-col gap-3">
-              {order.stoneSnapshots.map((s, i) => (
-                <div key={s.id ?? i} className="flex items-center gap-3">
-                  <GemTile
-                    shape={(s.shape ?? "Redondo") as Shape}
-                    size={30}
-                    className="h-14 w-14 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <div className="tabular text-[13px] text-[var(--on-surface)]">
-                      {(s.carat ?? 0).toFixed(2)} ct · {s.shape} · {s.color} ·{" "}
-                      {s.clarity}
-                    </div>
-                    <div className="tabular text-[11px] text-[var(--outline)]">
-                      {s.lab} {s.certNumber}
-                    </div>
-                  </div>
+            <div className="mt-3 flex items-center gap-3">
+              <GemTile
+                shape={(order.stoneSnapshot.shape ?? "Redondo") as Shape}
+                size={30}
+                className="h-14 w-14 shrink-0"
+              />
+              <div className="min-w-0">
+                <div className="tabular text-[13px] text-[var(--on-surface)]">
+                  {(order.stoneSnapshot.carat ?? 0).toFixed(2)} ct ·{" "}
+                  {order.stoneSnapshot.shape} · {order.stoneSnapshot.color} ·{" "}
+                  {order.stoneSnapshot.clarity}
                 </div>
-              ))}
+                <div className="tabular text-[11px] text-[var(--outline)]">
+                  {order.stoneSnapshot.lab} {order.stoneSnapshot.certNumber}
+                </div>
+              </div>
             </div>
           </section>
 
