@@ -234,7 +234,7 @@ function GenerateModal({
               Abrir como lo verá tu cliente →
             </a>
             <Link
-              href="/inventario"
+              href="/propuestas"
               onClick={onClose}
               className="mt-2 block w-full rounded-[8px] py-2 text-center text-[12.5px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             >

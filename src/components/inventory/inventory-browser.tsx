@@ -13,21 +13,11 @@ import {
   CUTS,
   LABS,
 } from "@/lib/inventory";
-import type {
-  Stone,
-  ProposalStatus,
-  MarginBand,
-  ImportMethod,
-} from "@/lib/types";
-import type { ProposalView as TrackedProposal } from "@/lib/repo";
+import type { Stone, MarginBand } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 import { useSelection, MAX_SELECT } from "@/components/selection-provider";
-import {
-  listProposalsAction,
-  confirmOrderAction,
-  payOrderAction,
-} from "@/app/actions";
+import { listProposalsAction } from "@/app/actions";
 import {
   listFavoriteIdsAction,
   addFavoriteAction,
@@ -76,8 +66,6 @@ export function InventoryBrowser({
     return m;
   }, [stones, bands]);
 
-  const [tab, setTab] = useState<"inventario" | "propuestas">("inventario");
-
   // filtros
   const [shape, setShape] = useState<Multi>(new Set());
   const [type, setType] = useState<"" | "natural" | "lab">("");
@@ -115,12 +103,19 @@ export function InventoryBrowser({
   };
 
 
-  // seguimiento de propuestas (polling al store del servidor)
-  const [proposals, setProposals] = useState<TrackedProposal[]>([]);
-  const refresh = () => listProposalsAction().then(setProposals).catch(() => {});
+  // aviso de señales pendientes (la gestión vive en /propuestas)
+  const [pendingSignals, setPendingSignals] = useState(0);
   useEffect(() => {
-    refresh();
-    const i = setInterval(refresh, 3500);
+    const load = () =>
+      listProposalsAction()
+        .then((ps) =>
+          setPendingSignals(
+            ps.filter((p) => p.proposal.status === "señalada").length,
+          ),
+        )
+        .catch(() => {});
+    load();
+    const i = setInterval(load, 5000);
     return () => clearInterval(i);
   }, []);
 
@@ -159,10 +154,6 @@ export function InventoryBrowser({
     setPriceMax("");
   };
 
-  const pendingSignals = proposals.filter(
-    (p) => p.proposal.status === "señalada",
-  ).length;
-
   return (
     <div className="relative z-10 pb-28">
       <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-[var(--hairline)] bg-[var(--bg)]/85 px-5 py-3 backdrop-blur-md sm:px-8">
@@ -176,31 +167,36 @@ export function InventoryBrowser({
           <span className="text-[15px] font-bold text-[var(--on-surface)]">
             NewCo
           </span>
-          <nav className="ml-3 flex items-center gap-1">
-            <TabBtn active={tab === "inventario"} onClick={() => setTab("inventario")}>
+          <nav className="ml-3 flex items-center gap-3">
+            <span className="label-caps text-[9px] text-[var(--on-surface)]">
               Inventario
-            </TabBtn>
-            <TabBtn active={tab === "propuestas"} onClick={() => setTab("propuestas")}>
-              Propuestas{proposals.length ? ` (${proposals.length})` : ""}
+            </span>
+            <Link
+              href="/cotizador"
+              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Cotizador
+            </Link>
+            <Link
+              href="/propuestas"
+              className="label-caps flex items-center gap-1 text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Propuestas
               {pendingSignals ? (
-                <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-[var(--gold)]" />
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--gold)]"
+                  title={`${pendingSignals} con señal del cliente`}
+                />
               ) : null}
-            </TabBtn>
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <Link
-            href="/cotizador"
-            className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-          >
-            Cotizador
-          </Link>
           {user ? <UserMenu user={user} displayName={displayName} /> : null}
         </div>
       </header>
 
-      {tab === "inventario" ? (
-        <div className="mx-auto grid max-w-[1280px] grid-cols-1 lg:grid-cols-[248px_1fr]">
+      <div className="mx-auto grid max-w-[1280px] grid-cols-1 lg:grid-cols-[248px_1fr]">
           <aside className="no-print hidden border-r border-[var(--hairline)] px-5 py-6 lg:block">
             <FilterSection title="Forma">
               <ChipRow items={SHAPES} set={shape} onToggle={(v) => setShape(toggle(shape, v))} />
@@ -293,39 +289,11 @@ export function InventoryBrowser({
             )}
           </main>
         </div>
-      ) : (
-        <ProposalsPanel proposals={proposals} onChanged={refresh} />
-      )}
-
     </div>
   );
 }
 
 /* --------------------------------- piezas --------------------------------- */
-
-function TabBtn({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[6px] px-2.5 py-1 text-[12.5px] font-medium transition-colors ${
-        active
-          ? "bg-[var(--surface-low)] text-[var(--on-surface)]"
-          : "text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
 
 function Chip({
   active,
@@ -533,209 +501,3 @@ function StoneCard({
 }
 
 
-/* ----------------------------- seguimiento -------------------------------- */
-
-const STATUS_META: Record<ProposalStatus, { label: string; cls: string }> = {
-  enviada: { label: "Enviada", cls: "border-[var(--hairline)] text-[var(--on-surface-variant)]" },
-  señalada: { label: "Señalada", cls: "border-[var(--gold)] text-[var(--warn-text)] bg-[var(--warn-bg)]" },
-  confirmada: { label: "Confirmada", cls: "border-[#3c5a6b] text-[#5e87a0]" },
-  en_embarque: { label: "En embarque", cls: "border-[#3c5a6b] text-[#5e87a0] bg-[rgba(94,135,160,0.08)]" },
-  importando: { label: "Importando", cls: "border-[#3f7a5e] text-[#4f9d79]" },
-  entregada: { label: "Entregada", cls: "border-[#3f7a5e] text-[#4f9d79] bg-[rgba(79,157,121,0.08)]" },
-};
-
-function Countdown({ expiresAt }: { expiresAt: number }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const i = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(i);
-  }, []);
-  const r = Math.max(0, Math.floor((expiresAt - now) / 1000));
-  const h = String(Math.floor(r / 3600)).padStart(2, "0");
-  const m = String(Math.floor((r % 3600) / 60)).padStart(2, "0");
-  const s = String(r % 60).padStart(2, "0");
-  return (
-    <span className="tabular">
-      {h}:{m}:{s}
-    </span>
-  );
-}
-
-function ProposalsPanel({
-  proposals,
-  onChanged,
-}: {
-  proposals: TrackedProposal[];
-  onChanged: () => void;
-}) {
-  return (
-    <div className="mx-auto max-w-[920px] px-5 py-6 sm:px-8">
-      <h1 className="text-[20px] font-bold text-[var(--on-surface)]">Propuestas</h1>
-      <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-        Aquí ves la señal del cliente y avanzas: orden en firme → elegir método
-        (directa o embarque) → pagar a NewCo.
-      </p>
-
-      {proposals.length === 0 ? (
-        <p className="py-16 text-center text-[13.5px] text-[var(--on-surface-variant)]">
-          Aún no hay propuestas. Arma una desde el inventario.
-        </p>
-      ) : (
-        <div className="mt-6 flex flex-col gap-3">
-          {proposals.map((p) => (
-            <ProposalRow key={p.proposal.id} data={p} onChanged={onChanged} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ProposalRow({
-  data,
-  onChanged,
-}: {
-  data: TrackedProposal;
-  onChanged: () => void;
-}) {
-  const { proposal, hold, order } = data;
-  const meta = STATUS_META[proposal.status];
-  const signaled = proposal.signaledStoneId
-    ? getMockStone(proposal.signaledStoneId)
-    : undefined;
-  const [pending, startTransition] = useTransition();
-
-  const doConfirm = () => {
-    if (!proposal.signaledStoneId) return;
-    startTransition(async () => {
-      await confirmOrderAction(proposal.token, proposal.signaledStoneId!);
-      onChanged();
-    });
-  };
-  const doPay = (method: ImportMethod) => {
-    startTransition(async () => {
-      await payOrderAction(proposal.token, method);
-      onChanged();
-    });
-  };
-
-  return (
-    <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex">
-            {proposal.stoneIds.slice(0, 4).map((id, i) => {
-              const s = getMockStone(id);
-              return s ? (
-                <div
-                  key={id}
-                  className={`rounded-md border ${
-                    id === proposal.signaledStoneId
-                      ? "border-[var(--gold)]"
-                      : "border-[var(--hairline)]"
-                  }`}
-                  style={{ marginLeft: i === 0 ? 0 : -8 }}
-                >
-                  <GemTile shape={s.shape} size={22} className="h-9 w-9" />
-                </div>
-              ) : null;
-            })}
-          </div>
-          <div>
-            <div className="text-[14px] font-semibold text-[var(--on-surface)]">
-              {proposal.clientName || "Cliente"}
-            </div>
-            <div className="tabular text-[11px] text-[var(--on-surface-variant)]">
-              {proposal.stoneIds.length}{" "}
-              {proposal.stoneIds.length === 1 ? "pieza" : "piezas"}
-            </div>
-          </div>
-        </div>
-        <span
-          className={`label-caps rounded-[4px] border px-2 py-1 text-[9px] ${meta.cls}`}
-        >
-          {meta.label}
-        </span>
-      </div>
-
-      {signaled ? (
-        <div className="mt-4 rounded-lg border border-[var(--hairline)] bg-[var(--surface-low)] p-3">
-          <div className="label-caps text-[9px] text-[var(--outline)]">
-            El cliente señaló
-          </div>
-          <div className="tabular mt-1 text-[13px] text-[var(--on-surface)]">
-            {signaled.carat.toFixed(2)} ct · {signaled.shape} · {signaled.color} ·{" "}
-            {signaled.clarity} · {signaled.lab}
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 text-[12.5px] text-[var(--on-surface-variant)]">
-          Esperando que el cliente señale una pieza…
-        </p>
-      )}
-
-      {/* Acciones según estado (Opción A: confirmar ≠ elegir método) */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {proposal.status === "señalada" ? (
-          <button
-            type="button"
-            onClick={doConfirm}
-            disabled={pending}
-            className="rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {pending ? "Confirmando…" : "Poner orden en firme"}
-          </button>
-        ) : null}
-
-        {hold && proposal.status === "confirmada" ? (
-          <>
-            <span className="rounded-[8px] border border-[#3c5a6b] px-3 py-2 text-[12.5px] text-[#5e87a0]">
-              Hold vence en <Countdown expiresAt={hold.expiresAt} />
-            </span>
-            {signaled ? (
-              <Link
-                href={simulatorHref(signaled.id)}
-                className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
-              >
-                Cotizar →
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => doPay("directa")}
-              disabled={pending}
-              className="rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {pending ? "Procesando…" : "Realizar importación"}
-            </button>
-            <button
-              type="button"
-              onClick={() => doPay("consolidada")}
-              disabled={pending}
-              className="rounded-[8px] border border-[var(--gold)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50"
-            >
-              {pending ? "Procesando…" : "Agregar a embarque"}
-            </button>
-          </>
-        ) : null}
-
-        {order?.importMethod ? (
-          <span className="tabular rounded-[8px] border border-[#3f7a5e] bg-[rgba(79,157,121,0.08)] px-3 py-2 text-[12px] text-[#4f9d79]">
-            Pagada · {order.jewelerPaymentRef} ·{" "}
-            {order.importMethod === "consolidada"
-              ? "en embarque semanal"
-              : "importación directa"}
-          </span>
-        ) : null}
-        {order ? (
-          <Link
-            href={`/portal/compras/${order.id}`}
-            className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
-          >
-            Ver orden →
-          </Link>
-        ) : null}
-      </div>
-    </div>
-  );
-}

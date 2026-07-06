@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
-import { repo, type ProposalView } from "@/lib/repo";
+import { repo, type ProposalView, type ProposalPatch } from "@/lib/repo";
 import { notifier, supplier } from "@/lib/notify";
 import { payments } from "@/lib/payments";
 import { getMockStone } from "@/lib/inventory";
@@ -37,6 +37,26 @@ export async function signalInterestAction(
   const p = await repo.signalInterest(token, stoneId);
   if (p) notifier.jewelerSignaled(p.id, stoneId, p.clientName);
   return p ?? null;
+}
+
+/**
+ * Edita una propuesta del joyero en sesión (validado en servidor). El set de
+ * piedras y la señal sólo se editan mientras la orden NO está en firme;
+ * el nombre del cliente siempre.
+ */
+export async function updateProposalAction(
+  token: string,
+  patch: ProposalPatch,
+): Promise<ProposalView | null> {
+  const jewelerId = await currentJewelerId();
+  const p = await repo.getProposal(token);
+  if (!p || p.jewelerId !== jewelerId) return null;
+  const editable = p.status === "enviada" || p.status === "señalada";
+  const safe: ProposalPatch = editable
+    ? patch
+    : { clientName: patch.clientName };
+  await repo.updateProposal(token, safe);
+  return (await repo.viewProposal(token)) ?? null;
 }
 
 /**

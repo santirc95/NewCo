@@ -153,6 +153,12 @@ export function Cotizador({
             <span className="label-caps text-[9px] text-[var(--on-surface)]">
               Cotizador
             </span>
+            <Link
+              href="/propuestas"
+              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Propuestas
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

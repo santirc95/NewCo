@@ -60,6 +60,9 @@ export function PortalHeader({
               <NavLink href="/cotizador" active={active === "simulador"}>
                 Cotizador
               </NavLink>
+              <NavLink href="/propuestas" active={false}>
+                Propuestas
+              </NavLink>
             </>
           )}
         </nav>
