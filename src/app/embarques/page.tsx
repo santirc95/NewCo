@@ -3,15 +3,15 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { repo } from "@/lib/repo";
 import { UserMenu } from "@/components/user-menu";
-import { ProposalsManager } from "@/components/proposals/proposals-manager";
+import { ShipmentBoard } from "@/components/shipments/shipment-board";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "NewCo · Propuestas",
+  title: "NewCo · Embarque semanal",
 };
 
-export default async function PropuestasPage() {
+export default async function EmbarquesPage() {
   const session = await auth();
   const user = session?.user ?? null;
   const jeweler = user?.jewelerId ? await repo.getJeweler(user.jewelerId) : null;
@@ -37,26 +37,20 @@ export default async function PropuestasPage() {
               Inventario
             </Link>
             <Link
-              href="/cotizador"
+              href="/propuestas"
               className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             >
-              Cotizador
+              Propuestas
             </Link>
             <span className="label-caps text-[9px] text-[var(--on-surface)]">
-              Propuestas
-            </span>
-            <Link
-              href="/embarques"
-              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-            >
               Embarques
-            </Link>
+            </span>
           </nav>
         </div>
         {user ? <UserMenu user={user} displayName={jeweler?.name} /> : null}
       </header>
 
-      <ProposalsManager />
+      <ShipmentBoard />
     </main>
   );
 }

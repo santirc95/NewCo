@@ -159,6 +159,12 @@ export function Cotizador({
             >
               Propuestas
             </Link>
+            <Link
+              href="/embarques"
+              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
+            >
+              Embarques
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3">

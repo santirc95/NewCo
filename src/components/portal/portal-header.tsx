@@ -63,6 +63,9 @@ export function PortalHeader({
               <NavLink href="/propuestas" active={false}>
                 Propuestas
               </NavLink>
+              <NavLink href="/embarques" active={false}>
+                Embarques
+              </NavLink>
             </>
           )}
         </nav>

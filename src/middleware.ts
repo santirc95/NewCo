@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 
 /**
  * Protección de rutas validada en el servidor (edge).
- * - Públicas: /login, /p/[token], /api/auth/*.
+ * - Públicas: /login, /registro, /p/[token], /api/auth/*.
  * - Resto: requiere sesión.
  * - /admin: sólo role 'admin'.
  */
@@ -14,6 +14,7 @@ export default auth((req) => {
 
   const isPublic =
     path.startsWith("/login") ||
+    path.startsWith("/registro") ||
     path.startsWith("/p/") ||
     path.startsWith("/api/auth");
 

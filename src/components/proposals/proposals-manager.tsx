@@ -375,6 +375,14 @@ function ProposalRow({
               : "importación directa"}
           </span>
         ) : null}
+        {order?.importMethod === "consolidada" ? (
+          <Link
+            href="/embarques"
+            className="rounded-[8px] border border-[var(--gold)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
+          >
+            Ver embarque →
+          </Link>
+        ) : null}
         {order ? (
           <Link
             href={`/portal/compras/${order.id}`}
