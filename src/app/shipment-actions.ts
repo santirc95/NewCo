@@ -156,6 +156,28 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   };
 }
 
+/** Leyenda ligera del embarque abierto (para propuestas / urgencia sana). */
+export interface ShipmentLegend {
+  weekLabel: string;
+  cutoffAt: string;
+  shipmentDayLabel: string;
+  transitWeeks: string;
+}
+
+export async function getShipmentLegendAction(): Promise<ShipmentLegend | null> {
+  const s = await auth();
+  if (!s?.user) return null;
+  const settings = await repo.getSettings();
+  const open = await repo.getOpenShipment();
+  if (!open) return null;
+  return {
+    weekLabel: open.weekLabel,
+    cutoffAt: open.cutoffAt,
+    shipmentDayLabel: settings.shipmentDayLabel,
+    transitWeeks: settings.transitWeeks,
+  };
+}
+
 /** El joyero confirma su costo final al cierre (nunca se cobra sin confirmar). */
 export async function confirmFinalCostAction(orderId: string): Promise<boolean> {
   const s = await auth();

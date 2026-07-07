@@ -324,7 +324,7 @@ export const memoryRepo: Repo = {
         s.orderIds.push(o.id);
         o.shipmentId = s.id;
       }
-      o.tracking.push({ stage: "en_embarque", at: now() });
+      o.tracking.push({ stage: "en_embarque", at: now(), note: s?.weekLabel });
       if (p) p.status = "en_embarque";
     } else {
       if (p) p.status = "importando";

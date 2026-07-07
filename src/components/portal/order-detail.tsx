@@ -107,12 +107,25 @@ export function OrderDetail({ order: initial }: { order: Order }) {
                     <div className="tabular text-[11px] text-[var(--on-surface-variant)]">
                       {entry ? fechaHora(entry.at) : "pendiente"}
                     </div>
+                    {entry?.note ? (
+                      <div className="mt-0.5 text-[10.5px] text-[var(--warn-text)]">
+                        {entry.note}
+                      </div>
+                    ) : null}
                   </div>
                 </li>
               );
             })}
           </ol>
 
+          {order.importMethod === "consolidada" ? (
+            <Link
+              href="/embarques"
+              className="mb-2 block rounded-[8px] border border-[var(--gold)] py-2 text-center text-[12px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
+            >
+              Ver embarque →
+            </Link>
+          ) : null}
           {!order.importMethod ? (
             <p className="mt-1 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-center text-[11.5px] text-[var(--warn-text)]">
               Elige el método de importación y paga para avanzar (en Propuestas).
@@ -176,6 +189,15 @@ export function OrderDetail({ order: initial }: { order: Order }) {
                   {formatMXN(q.allin)}
                 </span>
               </div>
+              {order.finalCostConfirmed ? (
+                <p className="mt-1 text-[11px] text-[#4f9d79]">
+                  ✓ Costo final confirmado al cierre del embarque
+                </p>
+              ) : order.importMethod === "consolidada" ? (
+                <p className="mt-1 text-[10.5px] text-[var(--outline)]">
+                  Proyección — se congela y la confirmas al cierre del embarque.
+                </p>
+              ) : null}
             </div>
           </section>
 

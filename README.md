@@ -1,76 +1,66 @@
-# NewCo · Simulador de costo aterrizado
+# NewCo · Plataforma de importación de diamantes (Etapa 1)
 
-Simulador del costo aterrizado y precio de venta para la **importación B2B de
-diamante en México**. Versión 1 **standalone**: sin backend ni Airtable; todos
-los supuestos se editan a mano y el desglose se recalcula en vivo.
+NewCo es **importador de registro**: le vende al joyero mexicano el diamante a
+precio de origen **con factura (CFDI) y nacionalización resuelta**. *Quien da
+buen precio no da factura; quien da factura no da buen precio. NewCo da los dos.*
+
+**Painkiller:** facilidad, trazabilidad y navegación. La consolidación por
+**embarque semanal** concentra el volumen para bajar el costo fijo por piedra.
 
 ## Stack
 
-- Next.js 16 (App Router) + TypeScript
-- Tailwind CSS v4
-- Componentes estilo shadcn (primitivos en `src/components/ui/`)
-- Estado sólo en memoria (sin `localStorage`/`sessionStorage`)
-- Listo para desplegar en Vercel
+- Next.js 16 (App Router) + TypeScript + Tailwind v4, GSAP. Español, `es-MX`.
+- Auth.js (NextAuth v5) con roles `jeweler`/`admin`; **permisos validados en
+  servidor** (`src/middleware.ts` + checks en server actions/páginas).
+- **Capa de datos** en `src/lib/repo/` — hoy en memoria; Airtable se activa
+  definiendo `AIRTABLE_API_KEY` + `AIRTABLE_BASE_ID` (implementación pendiente,
+  misma interfaz). El inventario del proveedor llega por su API (mock).
 
 ## Desarrollo
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
-npm run build    # build de producción
+cp .env.example .env.local   # o define AUTH_SECRET (openssl rand -base64 32)
+npm run dev                  # http://localhost:3000
 ```
 
-## Cómo funciona
+Cuentas demo: `joyero@demo.mx` / `joyero123` · `admin@newco.mx` / `newco123`.
 
-- **Supuestos** (tarjeta izquierda): campos editables. El campo *Arancel (IGI)*
-  trae una nota en ámbar para confirmar con el agente aduanal (el diamante
-  pulido 7102.39 suele ser bajo o 0%; verificar contra el decreto vigente).
-- **Número héroe**: precio all-in al joyero (con IVA). El IVA es **acreditable**,
-  no es un pasivo.
-- **Barra de composición**: proporción del precio (sin IVA) entre Piedra,
-  Logística + seguro, Aduana y Servicio/Margen NewCo.
-- **Desglose**: ledger vertical con subtotales (Valor en aduana, Costo
-  aterrizado, Precio de venta).
-- **Toggle Interna / Cliente**:
-  - *Interna*: muestra la línea de margen, el IVA de importación y la tarjeta de
-    capital de trabajo.
-  - *Cliente*: oculta esas tres y renombra el margen a "Servicio de importación
-    NewCo".
-- **Export PDF**: usa `window.print()` con un print-stylesheet limpio.
+## Superficies
 
-## Fórmulas
+| Ruta | Qué es |
+|---|---|
+| `/inventario` (+ `/inventario/[id]`) | Grid con filtros en vivo, ♥ favoritos, detalle tipo galería. Precios all-in USD. |
+| `/cotizador` | Destino de "Simular importación/orden" (no está en el nav): `computeQuote` multi-piedra, OpParams editables, IGI con flag, ahorro por consolidar. |
+| `/propuestas` | Gestión: editar set/cliente, link al cliente, señal editable, orden en firme + método. |
+| `/embarques` | El barco semanal **como simulador vivo**: héroe all-in consolidado, piedras anónimas (◈/◆), desglose agregado, ajuste a favor, confirmar costo final. |
+| `/p/[token]` | Cliente final (público): ve y señala. **Sin precio, sin pago, sin login.** |
+| `/portal/*` | Facturación CFDI 4.0, compras + trazabilidad (timeline), direcciones, pagos tokenizados, branding, contraseña. |
+| `/admin` | Embarques (crear/cerrar-congelar/zarpar/entregar), Config (leyendas), bandas de margen, joyeros + aprobaciones. |
+| `/registro` | Alta por invitación → **pendiente de aprobación** del admin. |
 
-Toda la lógica vive en `src/lib/compute.ts` como la función **pura**
-`computeQuote(inputs)`, separada de la UI:
+## Reglas de negocio (invariantes)
 
-```
-stoneMxn  = stoneUsd * fx
-aduana    = stoneMxn + logi                     // Valor en aduana
-igiAmt    = aduana * (igi / 100)
-dtaAmt    = aduana * (dta / 100)
-landed    = aduana + igiAmt + dtaAmt + agente   // Costo aterrizado
-ivaImp    = (aduana + igiAmt + dtaAmt) * 0.16   // IVA importación (acreditable)
-marginAmt = landed * (margin / 100)
-price     = landed + marginAmt                  // Precio de venta (sin IVA)
-ivaOut    = price * 0.16                         // IVA trasladado (acreditable)
-allin     = price + ivaOut                       // Precio all-in al joyero
-float     = landed + ivaImp                      // Anticipo mínimo (capital de trabajo)
-```
+- **Opción A:** confirmar orden (hold) ≠ elegir método. Al elegir (directa /
+  consolidada) el joyero **paga** → NewCo compra al proveedor → se suelta el
+  hold. **Cobrar siempre antes de comprar al proveedor.**
+- Margen por **bandas globales** por valor (USD), visible como "Servicio de
+  importación NewCo". Multi-piedra: flete/agente **prorrateados por valor**.
+- **IVA acreditable, nunca pasivo.** El desglose remata en el precio
+  **con IVA incluido** (la costumbre mexicana), con el sin-IVA como subtotal.
+- Embarque **público sin identificar joyeros** (sólo agregado anónimo); el
+  costo pre-corte es **proyección** — se congela al cierre y **cada joyero
+  confirma su costo final** antes de zarpar.
+- Favoritos y órdenes guardan **snapshot** (el inventario es vivo). Métodos de
+  pago **nunca** con datos crudos. Airtable sólo server-side. Inventario cero.
 
-## Arquitectura para v2
+## Lógica pura
 
-El contrato `QuoteInputs` y la función pura `computeQuote()` están aislados de la
-UI a propósito. En v2:
+`src/lib/quote.ts` — `resolveMargin` (bandas) y `computeQuote` (multi-piedra).
+Sin dependencias de UI; alimenta cotizador, inventario, propuestas y embarques.
 
-- Los supuestos llegarán desde **Airtable** (tablas Clientes / Ventas /
-  Invoices) en lugar de editarse a mano — la tarjeta de Supuestos pasa a sólo
-  lectura, alimentando los mismos `QuoteInputs`.
-- El **PDF** se generará server-side con un **folio inmutable** (snapshot
-  congelado de la cotización). El botón actual (`window.print()`) está
-  desacoplado para sustituirlo sin tocar la lógica de negocio.
+## Capítulo 2 (diferido, costuras listas `// TODO Cap.2`)
 
-## Notas de modelo
-
-- El IVA (importación y trasladado) es **acreditable**, no es pasivo fiscal.
-- Modelo **contra orden confirmada**: inventario cero, sin días en inventario ni
-  costo de capital propio (el anticipo del joyero cubre el desembolso).
+Airtable real · cobro real (SPEI/tarjeta) · lealtad por volumen (apilar en
+`resolveMargin`; las órdenes ya guardan `jewelerId`+`totalUsd`) · white-label ·
+segundo embarque · API real del proveedor · pedimento/guía/CFDI reales.

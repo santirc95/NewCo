@@ -13,6 +13,10 @@ import {
   confirmOrderAction,
   payOrderAction,
 } from "@/app/actions";
+import {
+  getShipmentLegendAction,
+  type ShipmentLegend,
+} from "@/app/shipment-actions";
 
 /* ------------------------------- metadatos -------------------------------- */
 
@@ -65,10 +69,12 @@ export function ProposalsManager() {
   const [proposals, setProposals] = useState<TrackedProposal[]>([]);
   const [filter, setFilter] = useState<Filter>("todas");
   const [editing, setEditing] = useState<TrackedProposal | null>(null);
+  const [legend, setLegend] = useState<ShipmentLegend | null>(null);
 
   const refresh = () => listProposalsAction().then(setProposals).catch(() => {});
   useEffect(() => {
     refresh();
+    getShipmentLegendAction().then(setLegend).catch(() => {});
     const i = setInterval(refresh, 3500);
     return () => clearInterval(i);
   }, []);
@@ -119,6 +125,7 @@ export function ProposalsManager() {
             <ProposalRow
               key={p.proposal.id}
               data={p}
+              legend={legend}
               onChanged={refresh}
               onEdit={() => setEditing(p)}
             />
@@ -144,10 +151,12 @@ export function ProposalsManager() {
 
 function ProposalRow({
   data,
+  legend,
   onChanged,
   onEdit,
 }: {
   data: TrackedProposal;
+  legend: ShipmentLegend | null;
   onChanged: () => void;
   onEdit: () => void;
 }) {
@@ -364,6 +373,17 @@ function ProposalRow({
             >
               {pending ? "Procesando…" : "Agregar a embarque"}
             </button>
+            {legend ? (
+              <span className="basis-full text-[10.5px] text-[var(--outline)]">
+                ⚓ {legend.weekLabel} · corte{" "}
+                {new Date(legend.cutoffAt).toLocaleDateString("es-MX", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "short",
+                })}{" "}
+                · {legend.transitWeeks.toLowerCase()}
+              </span>
+            ) : null}
           </>
         ) : null}
 
