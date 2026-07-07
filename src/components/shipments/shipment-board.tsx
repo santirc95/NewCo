@@ -153,8 +153,58 @@ export function ShipmentBoard() {
         </div>
       </div>
 
+      {/* El barco — piedras anónimas (las tuyas en oro) */}
+      <div className="mt-6 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+            El barco de esta semana
+          </span>
+          <span className="tabular text-[11px] text-[var(--outline)]">
+            {board.count} {board.count === 1 ? "piedra" : "piedras"} a bordo
+          </span>
+        </div>
+        {board.count === 0 ? (
+          <p className="mt-4 text-center text-[12.5px] text-[var(--on-surface-variant)]">
+            El barco está vacío — la primera piedra paga el costo fijo completo;
+            cada nueva lo reparte.
+          </p>
+        ) : (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {Array.from({ length: board.count - board.myOrders.length }).map(
+              (_, i) => (
+                <div
+                  key={`anon-${i}`}
+                  title="Piedra de otro joyero (anónima)"
+                  className="grid h-11 w-11 place-items-center rounded-lg border border-[var(--hairline)] bg-[var(--surface-low)] text-[16px] text-[var(--outline)]"
+                >
+                  ◈
+                </div>
+              ),
+            )}
+            {board.myOrders.map((o) => (
+              <div
+                key={o.orderId}
+                title={`Tuya: ${o.label}`}
+                className="grid h-11 w-11 place-items-center rounded-lg border border-[var(--gold)] bg-[var(--warn-bg)] text-[16px] text-[var(--warn-text)] shadow-[0_0_0_1px_var(--gold)]"
+              >
+                ◆
+              </div>
+            ))}
+            <div
+              title="Espacio libre — invita a más joyeros"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-dashed border-[var(--outline-variant)] text-[14px] text-[var(--outline-variant)]"
+            >
+              +
+            </div>
+          </div>
+        )}
+        <p className="mt-3 text-[10.5px] text-[var(--outline)]">
+          Las piedras ajenas se muestran anónimas — sin specs ni dueño.
+        </p>
+      </div>
+
       {/* Agregado público — sin identificar joyeros */}
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
           label="Piedras en el barco"
           value={String(board.count)}
@@ -220,11 +270,12 @@ export function ShipmentBoard() {
             {board.myOrders.map((o) => (
               <div
                 key={o.orderId}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] px-4 py-3"
+                className="rounded-xl border border-[var(--gold)]/40 bg-[var(--surface)] px-4 py-3"
               >
+                <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="tabular text-[13.5px] font-medium text-[var(--on-surface)]">
-                    {o.label}
+                    ◆ {o.label}
                   </div>
                   <div className="tabular mt-0.5 text-[11px] text-[var(--on-surface-variant)]">
                     Pagaste {formatMXN(o.paidMxn)} ·{" "}
@@ -255,6 +306,22 @@ export function ShipmentBoard() {
                     </span>
                   ) : null}
                 </div>
+                </div>
+
+                {/* Simulación viva de ESTA piedra dentro del embarque */}
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--hairline)] pt-3 sm:grid-cols-4">
+                  <MiniStat
+                    label="Flete+agente (tu parte)"
+                    value={formatMXN(o.fixedShareMxn)}
+                  />
+                  <MiniStat label="Costo aterrizado" value={formatMXN(o.landedMxn)} />
+                  <MiniStat label="Servicio NewCo" value={formatMXN(o.serviceMxn)} />
+                  <MiniStat
+                    label={board.frozen ? "All-in final" : "All-in proyectado"}
+                    value={formatMXN(o.projectedMxn)}
+                    gold
+                  />
+                </div>
               </div>
             ))}
           </div>
@@ -267,6 +334,29 @@ export function ShipmentBoard() {
       </p>
 
       {inviteOpen ? <InviteModal onClose={() => setInviteOpen(false)} /> : null}
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  gold,
+}: {
+  label: string;
+  value: string;
+  gold?: boolean;
+}) {
+  return (
+    <div>
+      <div className="label-caps text-[8.5px] text-[var(--outline)]">{label}</div>
+      <div
+        className={`tabular mt-0.5 text-[13px] font-semibold ${
+          gold ? "text-[var(--warn-text)]" : "text-[var(--on-surface)]"
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

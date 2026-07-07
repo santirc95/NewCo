@@ -25,6 +25,11 @@ export interface MyShipmentOrder {
   /** Ajuste estimado a favor (+) o en contra (−) al cierre. */
   deltaMxn: number;
   finalCostConfirmed: boolean;
+  // Desglose vivo de la simulación consolidada (sólo para piedras propias):
+  landedMxn: number;
+  serviceMxn: number;
+  priceMxn: number;
+  fixedShareMxn: number; // flete+agente prorrateado a esta piedra
 }
 
 /**
@@ -107,6 +112,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
         projectedMxn: projected,
         deltaMxn: paid - projected,
         finalCostConfirmed: Boolean(o.finalCostConfirmed),
+        landedMxn: line.landed,
+        serviceMxn: line.marginAmt,
+        priceMxn: line.price,
+        fixedShareMxn: line.logiShare + line.agenteShare,
       });
     }
   }
