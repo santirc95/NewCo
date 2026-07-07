@@ -166,11 +166,11 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             <div className="mt-3 flex flex-col gap-2 text-[13px]">
               <Row label="Costo aterrizado" value={q.landedTotal} />
               <Row label="Servicio de importación NewCo" value={q.marginAmt} />
-              <Row label="Precio de venta (sin IVA)" value={q.price} strong />
+              <Row label="Precio de venta (sin IVA)" value={q.price} />
               <Row label="IVA trasladado (16%)" value={q.ivaOut} tag="acreditable" />
               <div className="mt-1 flex items-center justify-between border-t border-[var(--hairline)] pt-2">
                 <span className="font-semibold text-[var(--on-surface)]">
-                  Total all-in
+                  Precio de venta (con IVA incluido)
                 </span>
                 <span className="tabular text-[15px] font-bold text-[var(--on-surface)]">
                   {formatMXN(q.allin)}

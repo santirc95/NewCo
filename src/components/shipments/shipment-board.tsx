@@ -303,8 +303,13 @@ export function ShipmentBoard() {
             <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
             <LedgerRow label="Aduana (IGI + DTA + agente)" value={board.aggregate.composition.customs} marker="var(--c-aduana)" />
             <LedgerRow label="Servicio de importación NewCo" value={board.aggregate.composition.service} marker="var(--c-servicio)" />
-            <LedgerRow label="Precio de venta (sin IVA)" value={board.aggregate.price} total />
+            <LedgerRow label="Precio de venta (sin IVA)" value={board.aggregate.price} />
             <LedgerRow label="IVA trasladado (16%)" value={board.aggregate.ivaOut} tag="acreditable" />
+            <LedgerRow
+              label="Precio de venta (con IVA incluido)"
+              value={board.aggregate.allin}
+              total
+            />
             <LedgerRow
               label="Ahorro vs importar por separado"
               value={board.totalSavingsMxn}

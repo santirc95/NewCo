@@ -167,8 +167,17 @@ export function BreakdownLedger({ quote, stones, marginLabel }: BreakdownLedgerP
           />
           <LedgerRow label="Costo aterrizado" value={quote.landedTotal} variant="subtotal" />
           <LedgerRow label={marginLabel} value={quote.marginAmt} marker="var(--c-servicio)" />
-          <LedgerRow label="Precio de venta (sin IVA)" value={quote.price} variant="total" />
+          <LedgerRow
+            label="Precio de venta (sin IVA)"
+            value={quote.price}
+            variant="subtotal"
+          />
           <LedgerRow label="IVA trasladado (16%)" value={quote.ivaOut} tag="acreditable" />
+          <LedgerRow
+            label="Precio de venta (con IVA incluido)"
+            value={quote.allin}
+            variant="total"
+          />
         </div>
       </CardBody>
     </Card>
