@@ -10,6 +10,10 @@ interface HeroCardProps {
   composition: Quote["composition"];
   /** Etiqueta del 4º segmento (servicio NewCo). */
   servicioLabel: string;
+  /** Etiqueta del número héroe (default: precio all-in al joyero). */
+  label?: string;
+  /** Línea de apoyo bajo el número (default: sin IVA + acreditación). */
+  subline?: React.ReactNode;
 }
 
 const HERO_SEGMENTS: {
@@ -26,7 +30,14 @@ const HERO_SEGMENTS: {
  * Número héroe: única superficie oscura (mesh champán) sobre el papel marfil.
  * Hero = lo que el joyero paga a NewCo (all-in con IVA).
  */
-export function HeroCard({ allin, price, composition, servicioLabel }: HeroCardProps) {
+export function HeroCard({
+  allin,
+  price,
+  composition,
+  servicioLabel,
+  label = "Precio all-in al joyero",
+  subline,
+}: HeroCardProps) {
   const denom = price > 0 ? price : 1;
   return (
     <div
@@ -38,7 +49,7 @@ export function HeroCard({ allin, price, composition, servicioLabel }: HeroCardP
       <div className="relative flex h-full flex-col justify-between gap-8 p-8 text-white">
         <div>
           <span className="label-caps text-[11px] text-[var(--h-servicio)]/90">
-            Precio all-in al joyero
+            {label}
           </span>
           <AnimatedNumber
             value={allin}
@@ -46,18 +57,22 @@ export function HeroCard({ allin, price, composition, servicioLabel }: HeroCardP
             className="tabular mt-3 block text-[clamp(2.4rem,6vw,3.4rem)] font-bold leading-none tracking-[-0.02em] text-white"
           />
           <div className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[13px] text-white/65">
-            <span className="flex items-baseline gap-1">
-              Sin IVA:{" "}
-              <AnimatedNumber
-                value={price}
-                format={formatMXN}
-                className="tabular text-white/90"
-              />
-            </span>
-            <span aria-hidden className="text-white/35">
-              ·
-            </span>
-            <span>el IVA se acredita</span>
+            {subline ?? (
+              <>
+                <span className="flex items-baseline gap-1">
+                  Sin IVA:{" "}
+                  <AnimatedNumber
+                    value={price}
+                    format={formatMXN}
+                    className="tabular text-white/90"
+                  />
+                </span>
+                <span aria-hidden className="text-white/35">
+                  ·
+                </span>
+                <span>el IVA se acredita</span>
+              </>
+            )}
           </div>
         </div>
 

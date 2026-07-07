@@ -56,12 +56,6 @@ export default async function FavoritosPage() {
               Inventario
             </Link>
             <Link
-              href="/cotizador"
-              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-            >
-              Cotizador
-            </Link>
-            <Link
               href="/propuestas"
               className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             >

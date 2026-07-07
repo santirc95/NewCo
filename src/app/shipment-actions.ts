@@ -32,11 +32,21 @@ export interface MyShipmentOrder {
   fixedShareMxn: number; // flete+agente prorrateado a esta piedra
 }
 
+/** Cotización agregada y ANÓNIMA de todo el embarque (mismo computeQuote). */
+export interface ShipmentAggregate {
+  allin: number;
+  price: number;
+  ivaOut: number;
+  landedTotal: number;
+  composition: { stone: number; logistics: number; customs: number; service: number };
+}
+
 /**
  * Tablero PÚBLICO del embarque: sólo agregados (nº de piedras, valor total,
  * costo prorrateado). NO identifica al joyero dueño de cada piedra.
  */
 export interface ShipmentBoard {
+  aggregate: ShipmentAggregate | null;
   shipmentId: string;
   weekLabel: string;
   cutoffAt: string;
@@ -121,6 +131,15 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   }
 
   return {
+    aggregate: consolidated
+      ? {
+          allin: consolidated.allin,
+          price: consolidated.price,
+          ivaOut: consolidated.ivaOut,
+          landedTotal: consolidated.landedTotal,
+          composition: consolidated.composition,
+        }
+      : null,
     shipmentId: shipment.id,
     weekLabel: shipment.weekLabel,
     cutoffAt: shipment.cutoffAt,

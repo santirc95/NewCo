@@ -42,12 +42,6 @@ export default async function PropuestasPage() {
             >
               Inventario
             </Link>
-            <Link
-              href="/cotizador"
-              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-            >
-              Cotizador
-            </Link>
             <span className="label-caps text-[9px] text-[var(--on-surface)]">
               Propuestas
             </span>

@@ -172,12 +172,6 @@ export function InventoryBrowser({
               Inventario
             </span>
             <Link
-              href="/cotizador"
-              className="label-caps text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
-            >
-              Cotizador
-            </Link>
-            <Link
               href="/propuestas"
               className="label-caps flex items-center gap-1 text-[9px] text-[var(--on-surface-variant)] hover:text-[var(--on-surface)]"
             >
