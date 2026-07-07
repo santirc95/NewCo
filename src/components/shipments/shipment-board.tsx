@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
+import { AnimatedNumber } from "@/components/animated-number";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
@@ -152,6 +153,54 @@ export function ShipmentBoard() {
           </button>
         </div>
       </div>
+
+      {/* Número héroe — tu posición en el barco (estilo cotizador) */}
+      {board.myOrders.length > 0 ? (
+        <div
+          className="hero-card grain relative mt-6 overflow-hidden rounded-xl"
+          style={{ boxShadow: "var(--shadow-hero)" }}
+        >
+          <div className="gradient-mesh absolute inset-0 opacity-95" aria-hidden />
+          <div className="relative p-7 text-white">
+            <span className="label-caps text-[11px] text-[var(--h-servicio)]/90">
+              {board.frozen
+                ? "Tu costo final en este embarque"
+                : "Tu all-in proyectado en este embarque"}
+            </span>
+            <AnimatedNumber
+              value={board.myOrders.reduce((s, o) => s + o.projectedMxn, 0)}
+              format={formatMXN}
+              className="tabular mt-3 block text-[clamp(2rem,5vw,2.8rem)] font-bold leading-none tracking-[-0.02em] text-white"
+            />
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[13px] text-white/65">
+              <span>
+                Pagaste{" "}
+                <span className="tabular text-white/90">
+                  {formatMXN(board.myOrders.reduce((s, o) => s + o.paidMxn, 0))}
+                </span>
+              </span>
+              <span aria-hidden className="text-white/35">·</span>
+              <span>
+                {board.frozen ? "ajuste a favor" : "ajuste estimado a favor"}{" "}
+                <span className="tabular text-[var(--h-servicio)]">
+                  {formatMXN(
+                    Math.max(
+                      0,
+                      board.myOrders.reduce((s, o) => s + o.deltaMxn, 0),
+                    ),
+                  )}
+                </span>
+              </span>
+              {!board.frozen ? (
+                <>
+                  <span aria-hidden className="text-white/35">·</span>
+                  <span>se congela al cierre</span>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* El barco — piedras anónimas (las tuyas en oro) */}
       <div className="mt-6 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
