@@ -12,10 +12,13 @@ import {
 import type {
   Order,
   Settings,
+  Shipment,
   ShipmentStatus,
+  ShipmentTier,
   Stone,
   QuoteLineInput,
 } from "@/lib/types";
+import { tierFor, nextTierInfo } from "@/lib/tiers";
 
 /** Mis piedras dentro del embarque (sólo las propias — nunca las ajenas). */
 export interface MyShipmentOrder {
@@ -23,7 +26,11 @@ export interface MyShipmentOrder {
   label: string;
   /** Pago 1 ya realizado: el costo de la piedra. */
   stoneMxn: number;
-  /** Pago 2: saldo logístico + impuestos + servicio + IVA (proyección/congelado). */
+  /**
+   * Pago 2 GARANTIZADO si pagas ahora: saldo calculado sobre las piedras ya
+   * PAGADAS + la tuya (cierre atómico). Sólo puede bajar si pagan más —
+   * por construcción nunca cae en un escalón más caro al cierre.
+   */
   saldoMxn: number;
   logisticsPaid: boolean;
   reboteCount: number;
@@ -56,6 +63,12 @@ export interface ShipmentBoard {
   status: ShipmentStatus;
   settings: Settings;
   count: number;
+  /** Piedras con logística PAGADA (las únicas que entran al cierre atómico). */
+  paidCount: number;
+  /** Escalones de llenado (admin) + posición actual y siguiente. */
+  tiers: ShipmentTier[];
+  currentTier: ShipmentTier | null;
+  nextTier: { missing: number; tier: ShipmentTier } | null;
   totalUsd: number;
   fixedCostMxn: number;
   avgFixedPerStoneMxn: number | null;
@@ -110,6 +123,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     ? standaloneTotal - consolidated.allin
     : 0;
 
+  // Cierre atómico: sólo las PAGADAS definen el costo garantizado.
+  const paidSet = new Set(shipment.paidLogisticsOrderIds);
+  const paidOrders = orders.filter((o) => paidSet.has(o.id));
+
   const myOrders: MyShipmentOrder[] = [];
   if (consolidated && jewelerId) {
     for (const o of orders) {
@@ -117,11 +134,32 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
       const line = consolidated.lines.find((l) => l.stoneId === o.id);
       if (!line) continue;
       const projected = line.price * (1 + IVA_RATE);
+      // Pago 2 garantizado: quote sobre pagadas + esta (peor caso; sólo baja).
+      let saldo = 0;
+      if (!o.finalCostConfirmed) {
+        const basis = [...paidOrders.filter((x) => x.id !== o.id), o];
+        const basisLines: QuoteLineInput[] = basis.map((x) => {
+          const usd = x.stoneSnapshot.supplierPriceUsd ?? x.totalUsd;
+          return {
+            stoneId: x.id,
+            supplierPriceUsd: usd,
+            marginPct: resolveMargin(
+              { supplierPriceUsd: usd } as Stone,
+              null,
+              bands,
+            ),
+          };
+        });
+        const q = computeQuote(basisLines, op);
+        const myLine = q.lines.find((l) => l.stoneId === o.id);
+        if (myLine)
+          saldo = myLine.price * (1 + IVA_RATE) - myLine.stoneMxn;
+      }
       myOrders.push({
         orderId: o.id,
         label: `${(o.stoneSnapshot.carat ?? 0).toFixed(2)} ct · ${o.stoneSnapshot.shape ?? ""}`,
         stoneMxn: line.stoneMxn,
-        saldoMxn: projected - line.stoneMxn,
+        saldoMxn: saldo,
         logisticsPaid: Boolean(o.finalCostConfirmed),
         reboteCount: o.reboteCount ?? 0,
         projectedMxn: projected,
@@ -149,6 +187,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     status: shipment.status,
     settings,
     count: lines.length,
+    paidCount: paidOrders.length,
+    tiers: shipment.tiers,
+    currentTier: tierFor(lines.length, shipment.tiers),
+    nextTier: nextTierInfo(lines.length, shipment.tiers),
     totalUsd,
     fixedCostMxn,
     avgFixedPerStoneMxn: lines.length ? fixedCostMxn / lines.length : null,
@@ -182,8 +224,12 @@ export async function getShipmentLegendAction(): Promise<ShipmentLegend | null> 
 }
 
 /**
- * PAGO 2 — al corte: el joyero confirma y paga su saldo logístico congelado
- * (nunca se cobra un costo no confirmado; nunca viaja sin pagar).
+ * PAGO 2 — ANTES del corte (cierre atómico): el joyero confirma y paga el
+ * saldo de su ESCALÓN garantizado, calculado sobre las piedras ya pagadas +
+ * la suya. Como los siguientes pagos sólo reparten más el costo fijo, el
+ * número final al cierre nunca puede ser más caro que lo pagado (el caso
+ * "escalón más caro al cierre" es imposible por construcción → cualquier
+ * diferencia es ajuste a favor). Sólo con Pago 2 la piedra entra al corte.
  */
 export async function payLogisticsAction(orderId: string): Promise<boolean> {
   const s = await auth();
@@ -192,18 +238,15 @@ export async function payLogisticsAction(orderId: string): Promise<boolean> {
   const o = await repo.getOrder(orderId);
   if (!o || o.jewelerId !== jewelerId || o.finalCostConfirmed) return false;
   const shipment = o.shipmentId ? await repo.getShipment(o.shipmentId) : null;
-  if (!shipment || shipment.status !== "cerrado") return false; // sólo al corte
+  if (!shipment || shipment.status !== "abierto") return false; // pre-corte
 
-  // Saldo con costos CONGELADOS: all-in de su línea consolidada − piedra ya pagada.
+  // Base atómica: piedras con logística YA pagada + la propia.
+  const paidSet = new Set(shipment.paidLogisticsOrderIds);
+  const basisIds = [...shipment.orderIds.filter((x) => paidSet.has(x)), o.id];
   const orders = (
-    await Promise.all(shipment.orderIds.map((id) => repo.getOrder(id)))
+    await Promise.all([...new Set(basisIds)].map((id) => repo.getOrder(id)))
   ).filter((x): x is Order => Boolean(x));
   const bands = await repo.listBands();
-  const op = {
-    ...DEFAULT_OP,
-    logiMxn: shipment.frozenLogiMxn ?? DEFAULT_OP.logiMxn,
-    agenteMxn: shipment.frozenAgenteMxn ?? DEFAULT_OP.agenteMxn,
-  };
   const lines: QuoteLineInput[] = orders.map((x) => {
     const usd = x.stoneSnapshot.supplierPriceUsd ?? x.totalUsd;
     return {
@@ -212,7 +255,7 @@ export async function payLogisticsAction(orderId: string): Promise<boolean> {
       marginPct: resolveMargin({ supplierPriceUsd: usd } as Stone, null, bands),
     };
   });
-  const q = computeQuote(lines, op);
+  const q = computeQuote(lines, DEFAULT_OP);
   const line = q.lines.find((l) => l.stoneId === o.id);
   if (!line) return false;
   const saldo = line.price * (1 + IVA_RATE) - line.stoneMxn;

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
 import { HeroCard } from "@/components/hero-card";
 import { AnimatedNumber } from "@/components/animated-number";
+import { tierRangeLabel } from "@/lib/tiers";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
@@ -240,7 +241,8 @@ export function ShipmentBoard() {
             El barco de esta semana
           </span>
           <span className="tabular text-[11px] text-[var(--outline)]">
-            {board.count} {board.count === 1 ? "piedra" : "piedras"} a bordo
+            {board.count} {board.count === 1 ? "piedra" : "piedras"} a bordo ·{" "}
+            {board.paidCount} con logística pagada
           </span>
         </div>
         {board.count === 0 ? (
@@ -278,18 +280,47 @@ export function ShipmentBoard() {
             </div>
           </div>
         )}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10.5px] text-[var(--outline)]">
-            Las piedras ajenas se muestran anónimas — sin specs ni dueño.
-          </p>
-          {board.status === "abierto" ? (
-            <p className="tabular text-[11px] text-[var(--warn-text)]">
-              {board.count === 0
-                ? `La primera piedra carga ${formatMXN(board.fixedCostMxn)} de fijos`
-                : `Fijo promedio ${formatMXN(board.avgFixedPerStoneMxn ?? 0)} · con una más baja a ${formatMXN(board.nextAvgFixedPerStoneMxn)}`}
-            </p>
-          ) : null}
-        </div>
+        <p className="mt-3 text-[10.5px] text-[var(--outline)]">
+          Las piedras ajenas se muestran anónimas — sin specs ni dueño.
+        </p>
+
+        {/* Escalones de llenado — el costo se comunica por bandas, no por
+            número móvil: un rebote dentro del escalón no cambia el costo. */}
+        {board.tiers.length ? (
+          <div className="mt-3 border-t border-[var(--hairline)] pt-3">
+            <div className="label-caps text-[8.5px] text-[var(--outline)]">
+              Escalones de llenado · costo logístico por pieza
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {board.tiers.map((t) => {
+                const active =
+                  board.currentTier &&
+                  t.minStones === board.currentTier.minStones;
+                return (
+                  <span
+                    key={t.minStones}
+                    className={`tabular rounded-[6px] border px-2 py-1 text-[11px] ${
+                      active
+                        ? "border-[var(--gold)] bg-[var(--warn-bg)] font-semibold text-[var(--warn-text)]"
+                        : "border-[var(--hairline)] text-[var(--on-surface-variant)]"
+                    }`}
+                  >
+                    {tierRangeLabel(t)} → ~{formatMXN(t.costPerStoneMxn)} c/u
+                  </span>
+                );
+              })}
+            </div>
+            {board.status === "abierto" && board.nextTier ? (
+              <p className="mt-2 text-[11px] text-[var(--warn-text)]">
+                ⚓ Estás a {board.nextTier.missing}{" "}
+                {board.nextTier.missing === 1 ? "piedra" : "piedras"} del
+                siguiente escalón (~
+                {formatMXN(board.nextTier.tier.costPerStoneMxn)} c/u) — invita a
+                más joyeros.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {/* Desglose del embarque — mismo lenguaje que el cotizador (agregado) */}
@@ -355,32 +386,21 @@ export function ShipmentBoard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {!o.logisticsPaid ? (
-                    <span className="label-caps rounded-[4px] border border-[var(--hairline)] px-2 py-1 text-[9px] text-[var(--on-surface-variant)]">
-                      Saldo logístico{" "}
-                      {board.frozen ? "congelado" : "estimado"}{" "}
-                      {formatMXN(o.saldoMxn)}
-                    </span>
-                  ) : null}
-                  {board.status === "cerrado" && !o.logisticsPaid ? (
+                  {!o.logisticsPaid && board.status === "abierto" ? (
                     <button
                       type="button"
                       onClick={() => payLogistics(o.orderId)}
                       disabled={pending}
-                      className="rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
+                      className="tabular rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
                     >
                       {pending
                         ? "Procesando…"
-                        : `Confirmar y pagar logística`}
+                        : `Confirmar y pagar logística · ${formatMXN(o.saldoMxn)}`}
                     </button>
                   ) : null}
                   {o.logisticsPaid ? (
                     <span className="text-[11.5px] text-[#4f9d79]">
-                      ✓ Logística pagada — lista para zarpar
-                    </span>
-                  ) : board.status === "abierto" ? (
-                    <span className="text-[10.5px] text-[var(--outline)]">
-                      Pago 2 al corte
+                      ✓ Logística pagada — entra al corte
                     </span>
                   ) : null}
                 </div>
@@ -417,11 +437,12 @@ export function ShipmentBoard() {
                   </div>
                 </div>
 
-                {board.status === "cerrado" && !o.logisticsPaid ? (
+                {!o.logisticsPaid && board.status === "abierto" ? (
                   <p className="mt-2 rounded-[6px] bg-[var(--warn-bg)] px-2.5 py-1.5 text-[10.5px] leading-snug text-[var(--warn-text)]">
-                    Si no cubres la logística antes de zarpar, tu piedra pasa al
-                    siguiente embarque y su costo logístico se ajustará según ese
-                    embarque (límite: 3).
+                    Tu escalón queda garantizado al pagar — sólo puede bajar si
+                    entran más piedras (ajuste a favor al cierre). Si no pagas
+                    antes del corte, tu piedra rebota al siguiente embarque
+                    (límite: 3).
                   </p>
                 ) : null}
 

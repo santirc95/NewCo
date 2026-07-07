@@ -275,6 +275,13 @@ export interface Order {
 
 export type ShipmentStatus = "abierto" | "cerrado" | "en_transito" | "entregado";
 
+/** Escalón de llenado: rango de piedras → costo logístico aprox. por pieza. */
+export interface ShipmentTier {
+  minStones: number;
+  maxStones: number | null; // null = sin tope
+  costPerStoneMxn: number;
+}
+
 /** Tabla "Embarques" — el barco semanal (ES un simulador vivo). */
 export interface Shipment {
   id: string;
@@ -282,9 +289,13 @@ export interface Shipment {
   /** Corte semanal (editable por admin). */
   cutoffAt: string;
   status: ShipmentStatus;
-  /** Órdenes consolidadas (de varios joyeros). */
+  /** Órdenes CANDIDATAS (de varios joyeros). */
   orderIds: string[];
-  /** Costos fijos congelados al cierre (con el nº real de piedras). */
+  /** Órdenes con logística PAGADA — las únicas que entran al cierre atómico. */
+  paidLogisticsOrderIds: string[];
+  /** Escalones de llenado (configurables por admin). */
+  tiers: ShipmentTier[];
+  /** Costos fijos congelados al cierre (con el nº real de piedras pagadas). */
   frozenLogiMxn?: number;
   frozenAgenteMxn?: number;
 }

@@ -8,8 +8,11 @@ import {
   adminCreateShipmentAction,
   adminCloseShipmentAction,
   adminAdvanceShipmentAction,
+  adminSaveShipmentTiersAction,
   type AdminShipmentInfo,
 } from "@/app/portal-actions";
+import { tierRangeLabel } from "@/lib/tiers";
+import type { ShipmentTier } from "@/lib/types";
 
 const STATUS_META: Record<ShipmentStatus, { label: string; cls: string }> = {
   abierto: { label: "Abierto", cls: "border-[#3f7a5e] text-[#4f9d79] bg-[rgba(79,157,121,0.08)]" },
@@ -45,6 +48,7 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
     d.setHours(18, 0, 0, 0);
     return toLocalInput(d);
   });
+  const [editingTiers, setEditingTiers] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const replace = (info: AdminShipmentInfo) =>
@@ -73,6 +77,14 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
     });
   };
 
+  const saveTiers = (id: string, tiers: ShipmentTier[]) => {
+    startTransition(async () => {
+      const info = await adminSaveShipmentTiersAction(id, tiers);
+      if (info) replace(info);
+      setEditingTiers(null);
+    });
+  };
+
   const advance = (id: string, status: ShipmentStatus) => {
     setError(null);
     startTransition(async () => {
@@ -90,9 +102,9 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
             Embarques
           </h2>
           <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-            Corte semanal: cerrar congela los costos fijos. Al zarpar sólo
-            viajan piedras con logística pagada; las demás rebotan al siguiente
-            embarque.
+            Cierre ATÓMICO al corte: sólo entran las piedras con logística
+            pagada (Pago 2) y con ésas se congela el costo — las demás rebotan
+            al siguiente embarque. El costo se comunica por escalones.
           </p>
         </div>
         <button
@@ -157,22 +169,39 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
                 </div>
                 <div className="tabular mt-0.5 text-[11px] text-[var(--on-surface-variant)]">
                   Corte {fechaHora(s.cutoffAt)} · {orderCount}{" "}
-                  {orderCount === 1 ? "piedra" : "piedras"}
-                  {s.status !== "abierto"
-                    ? ` · logística pagada ${confirmedCount}/${orderCount}`
-                    : ""}
+                  {orderCount === 1 ? "piedra" : "piedras"} · logística pagada{" "}
+                  {confirmedCount}/{orderCount}
                   {s.frozenLogiMxn !== undefined
                     ? ` · congelado: flete ${formatMXN(s.frozenLogiMxn)} + agente ${formatMXN(s.frozenAgenteMxn ?? 0)}`
                     : ""}
                 </div>
+                {editingTiers === s.id ? (
+                  <TiersEditor
+                    initial={s.tiers}
+                    pending={pending}
+                    onSave={(tiers) => saveTiers(s.id, tiers)}
+                    onClose={() => setEditingTiers(null)}
+                  />
+                ) : null}
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {s.status === "abierto" ? (
                   <button
                     type="button"
+                    onClick={() =>
+                      setEditingTiers(editingTiers === s.id ? null : s.id)
+                    }
+                    className="rounded-[8px] border border-[var(--hairline)] px-3 py-1.5 text-[12px] text-[var(--on-surface)] hover:border-[var(--gold)]"
+                  >
+                    Escalones
+                  </button>
+                ) : null}
+                {s.status === "abierto" ? (
+                  <button
+                    type="button"
                     onClick={() => close(s.id)}
                     disabled={pending}
-                    title={`Congela flete ${formatMXN(DEFAULT_OP.logiMxn)} + agente ${formatMXN(DEFAULT_OP.agenteMxn)} con ${orderCount} piedras`}
+                    title={`Cierre atómico: entran las ${confirmedCount} pagadas y se congela flete ${formatMXN(DEFAULT_OP.logiMxn)} + agente ${formatMXN(DEFAULT_OP.agenteMxn)}; las demás rebotan`}
                     className="rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
                   >
                     Cerrar corte
@@ -205,5 +234,112 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
         })}
       </div>
     </section>
+  );
+}
+
+function TiersEditor({
+  initial,
+  pending,
+  onSave,
+  onClose,
+}: {
+  initial: ShipmentTier[];
+  pending: boolean;
+  onSave: (tiers: ShipmentTier[]) => void;
+  onClose: () => void;
+}) {
+  const [rows, setRows] = useState(() =>
+    initial.map((t) => ({
+      min: String(t.minStones),
+      max: t.maxStones === null ? "" : String(t.maxStones),
+      cost: String(t.costPerStoneMxn),
+    })),
+  );
+
+  const set = (i: number, k: "min" | "max" | "cost", v: string) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+
+  const save = () =>
+    onSave(
+      rows
+        .filter((r) => r.min.trim() && r.cost.trim())
+        .map((r) => ({
+          minStones: parseInt(r.min, 10) || 0,
+          maxStones: r.max.trim() === "" ? null : parseInt(r.max, 10) || 0,
+          costPerStoneMxn: parseFloat(r.cost) || 0,
+        })),
+    );
+
+  return (
+    <div className="mt-3 rounded-lg border border-[var(--hairline)] bg-[var(--surface-low)] p-3">
+      <div className="label-caps mb-2 text-[8.5px] text-[var(--outline)]">
+        Escalones (piedras desde / hasta / costo logístico c/u) — ejemplo:{" "}
+        {initial[0] ? tierRangeLabel(initial[0]) : "1–2"}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {rows.map((r, i) => (
+          <div key={i} className="grid grid-cols-[1fr_1fr_1.4fr_auto] gap-1.5">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={r.min}
+              onChange={(e) => set(i, "min", e.target.value)}
+              placeholder="desde"
+              className="tabular rounded-[6px] border border-[var(--hairline)] bg-[var(--surface)] px-2 py-1 text-center text-[12px] text-[var(--on-surface)] outline-none focus:border-[var(--gold)]"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={r.max}
+              onChange={(e) => set(i, "max", e.target.value)}
+              placeholder="sin tope"
+              className="tabular rounded-[6px] border border-[var(--hairline)] bg-[var(--surface)] px-2 py-1 text-center text-[12px] text-[var(--on-surface)] outline-none focus:border-[var(--gold)]"
+            />
+            <input
+              type="text"
+              inputMode="decimal"
+              value={r.cost}
+              onChange={(e) => set(i, "cost", e.target.value)}
+              placeholder="$ c/u"
+              className="tabular rounded-[6px] border border-[var(--hairline)] bg-[var(--surface)] px-2 py-1 text-center text-[12px] text-[var(--on-surface)] outline-none focus:border-[var(--gold)]"
+            />
+            <button
+              type="button"
+              onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+              aria-label="Quitar escalón"
+              className="rounded-[6px] border border-[var(--hairline)] px-2 text-[11px] text-[var(--on-surface-variant)] hover:border-[var(--secondary)] hover:text-[var(--secondary)]"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setRows((rs) => [...rs, { min: "", max: "", cost: "" }])
+          }
+          className="rounded-[6px] border border-[var(--hairline)] px-2.5 py-1 text-[11.5px] text-[var(--on-surface)] hover:border-[var(--gold)]"
+        >
+          + Escalón
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending}
+          className="rounded-[6px] bg-[var(--primary)] px-3 py-1 text-[11.5px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
+        >
+          {pending ? "Guardando…" : "Guardar escalones"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[11.5px] text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }

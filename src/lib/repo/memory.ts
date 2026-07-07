@@ -14,6 +14,7 @@ import type {
   Settings,
 } from "@/lib/types";
 import { DEFAULT_BANDS } from "@/lib/quote";
+import { DEFAULT_TIERS } from "@/lib/tiers";
 import { getMockStone } from "@/lib/inventory";
 import type {
   Repo,
@@ -96,6 +97,8 @@ function seedShipments(settings: Settings): Shipment[] {
       cutoffAt,
       status: "abierto",
       orderIds: [],
+      paidLogisticsOrderIds: [],
+      tiers: DEFAULT_TIERS.map((t) => ({ ...t })),
     },
   ];
 }
@@ -106,10 +109,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV41?: DB };
+const g = globalThis as unknown as { __newcoDbV42?: DB };
 const db: DB =
-  g.__newcoDbV41 ??
-  (g.__newcoDbV41 = (() => {
+  g.__newcoDbV42 ??
+  (g.__newcoDbV42 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
@@ -143,6 +146,49 @@ function nextFolio(): string {
   db.folioSeq += 1;
   const year = new Date().getFullYear();
   return `PG-${year}-${String(db.folioSeq).padStart(3, "0")}`;
+}
+
+/** Rebota una piedra sin Pago 2 al siguiente embarque (límite 3). */
+function bounceOrder(o: Order, from: Shipment): void {
+  o.reboteCount = (o.reboteCount ?? 0) + 1;
+  if (o.reboteCount >= 3) {
+    // Evita rebote infinito: pasa a gestión del admin.
+    o.shipmentId = undefined;
+    o.tracking.push({
+      stage: "pendiente_logistica",
+      at: now(),
+      note: "3 embarques sin cubrir la logística — gestionar con NewCo",
+    });
+    return;
+  }
+  // Busca (o abre) el siguiente embarque de la semana próxima.
+  let next = db.shipments.find(
+    (x) => x.id !== from.id && x.status === "abierto",
+  );
+  if (!next) {
+    const cutoff = new Date(new Date(from.cutoffAt).getTime() + 7 * 86400000);
+    const label = cutoff.toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "long",
+    });
+    next = {
+      id: shortId("EMB"),
+      weekLabel: `Embarque · corte ${label}`,
+      cutoffAt: cutoff.toISOString(),
+      status: "abierto",
+      orderIds: [],
+      paidLogisticsOrderIds: [],
+      tiers: from.tiers.map((t) => ({ ...t })),
+    };
+    db.shipments.push(next);
+  }
+  next.orderIds.push(o.id);
+  o.shipmentId = next.id;
+  o.tracking.push({
+    stage: "en_embarque",
+    at: now(),
+    note: `Rebotó al ${next.weekLabel} — su costo logístico se ajustará según ese embarque`,
+  });
 }
 
 export const memoryRepo: Repo = {
@@ -353,6 +399,11 @@ export const memoryRepo: Repo = {
       note: `Pago 2 · ${paymentRef}`,
     });
     o.finalCostConfirmed = true;
+    // Cierre atómico: queda registrada entre las que SÍ entran al corte.
+    const s = db.shipments.find((x) => x.id === o.shipmentId);
+    if (s && !s.paidLogisticsOrderIds.includes(o.id)) {
+      s.paidLogisticsOrderIds.push(o.id);
+    }
     return o;
   },
 
@@ -398,13 +449,33 @@ export const memoryRepo: Repo = {
       cutoffAt,
       status: "abierto",
       orderIds: [],
+      paidLogisticsOrderIds: [],
+      tiers: DEFAULT_TIERS.map((t) => ({ ...t })),
     };
     db.shipments.push(s);
+    return s;
+  },
+  async saveShipmentTiers(id, tiers) {
+    const s = db.shipments.find((x) => x.id === id);
+    if (!s) return undefined;
+    s.tiers = tiers
+      .map((t) => ({ ...t }))
+      .sort((a, b) => a.minStones - b.minStones);
     return s;
   },
   async closeShipment(id, frozen) {
     const s = db.shipments.find((x) => x.id === id);
     if (!s) return undefined;
+    // CIERRE ATÓMICO: sólo entran (y definen el costo) las piedras con
+    // logística PAGADA; las candidatas sin Pago 2 rebotan AHORA — nunca
+    // llegaron a contar en el costo de nadie.
+    const paid = new Set(s.paidLogisticsOrderIds);
+    for (const orderId of [...s.orderIds]) {
+      if (paid.has(orderId)) continue;
+      const o = db.orders.find((x) => x.id === orderId);
+      if (o) bounceOrder(o, s);
+    }
+    s.orderIds = s.orderIds.filter((x) => paid.has(x));
     s.status = "cerrado";
     s.frozenLogiMxn = frozen.frozenLogiMxn;
     s.frozenAgenteMxn = frozen.frozenAgenteMxn;
@@ -415,58 +486,10 @@ export const memoryRepo: Repo = {
     if (!s) return undefined;
     s.status = status;
     if (status === "en_transito") {
-      // El barco zarpa SÓLO con piedras con logística pagada (Pago 2).
-      // Las no pagadas REBOTAN al siguiente embarque (límite 3).
-      const viajan: string[] = [];
+      // Tras el cierre atómico, todo lo que queda a bordo tiene Pago 2.
       for (const orderId of s.orderIds) {
-        const o = db.orders.find((x) => x.id === orderId);
-        if (!o) continue;
-        if (o.finalCostConfirmed) {
-          viajan.push(orderId);
-          await this.advanceOrder(orderId, "en_transito", s.weekLabel);
-          continue;
-        }
-        o.reboteCount = (o.reboteCount ?? 0) + 1;
-        if (o.reboteCount >= 3) {
-          // Evita rebote infinito: pasa a gestión del admin.
-          o.shipmentId = undefined;
-          o.tracking.push({
-            stage: "pendiente_logistica",
-            at: now(),
-            note: "3 embarques sin cubrir la logística — gestionar con NewCo",
-          });
-          continue;
-        }
-        // Busca (o abre) el siguiente embarque de la semana próxima.
-        let next = db.shipments.find(
-          (x) => x.id !== s.id && x.status === "abierto",
-        );
-        if (!next) {
-          const cutoff = new Date(
-            new Date(s.cutoffAt).getTime() + 7 * 86400000,
-          );
-          const label = cutoff.toLocaleDateString("es-MX", {
-            day: "2-digit",
-            month: "long",
-          });
-          next = {
-            id: shortId("EMB"),
-            weekLabel: `Embarque · corte ${label}`,
-            cutoffAt: cutoff.toISOString(),
-            status: "abierto",
-            orderIds: [],
-          };
-          db.shipments.push(next);
-        }
-        next.orderIds.push(o.id);
-        o.shipmentId = next.id;
-        o.tracking.push({
-          stage: "en_embarque",
-          at: now(),
-          note: `Rebotó al ${next.weekLabel} — su costo logístico se ajustará según ese embarque`,
-        });
+        await this.advanceOrder(orderId, "en_transito", s.weekLabel);
       }
-      s.orderIds = viajan; // el barco se va sólo con las pagadas
     }
     return s;
   },

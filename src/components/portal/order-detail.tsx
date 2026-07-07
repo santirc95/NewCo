@@ -148,8 +148,8 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             </p>
           ) : !order.finalCostConfirmed ? (
             <p className="mt-1 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-center text-[11.5px] leading-snug text-[var(--warn-text)]">
-              Pago 2 pendiente: el saldo logístico se confirma y paga al corte
-              del embarque. Sin él, la piedra no viaja.
+              Pago 2 pendiente: confirma y paga tu saldo logístico en Embarques
+              ANTES del corte. Sin él, la piedra no entra al cierre y rebota.
             </p>
           ) : !complete ? (
             <button
@@ -216,8 +216,8 @@ export function OrderDetail({ order: initial }: { order: Order }) {
                 </p>
               ) : order.importMethod === "consolidada" ? (
                 <p className="mt-1 text-[10.5px] text-[var(--outline)]">
-                  Pago 1 (piedra) cubierto · el saldo logístico se congela y se
-                  paga al corte del embarque (Pago 2).
+                  Pago 1 (piedra) cubierto · el saldo logístico se paga ANTES
+                  del corte (Pago 2) — tu escalón queda garantizado al pagar.
                 </p>
               ) : null}
             </div>

@@ -136,6 +136,16 @@ export async function adminCreateShipmentAction(
   return enrich(await repo.createShipment(weekLabel, cutoffAt));
 }
 
+/** Escalones de llenado del embarque (bandas de nº de piedras → costo c/u). */
+export async function adminSaveShipmentTiersAction(
+  id: string,
+  tiers: Shipment["tiers"],
+): Promise<AdminShipmentInfo | null> {
+  await requireAdmin();
+  const s = await repo.saveShipmentTiers(id, tiers);
+  return s ? enrich(s) : null;
+}
+
 /**
  * Corte semanal: cierra el embarque y CONGELA los costos fijos con el número
  * real de piedras. Después cada joyero confirma su costo final.
