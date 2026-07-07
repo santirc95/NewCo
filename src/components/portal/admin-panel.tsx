@@ -5,6 +5,7 @@ import type { Jeweler, MarginBand } from "@/lib/types";
 import {
   adminSaveBandsAction,
   adminSetJewelerActiveAction,
+  adminSetJewelerApprovedAction,
 } from "@/app/portal-actions";
 
 interface BandRow {
@@ -70,6 +71,13 @@ export function AdminPanel({
   const toggleJeweler = (j: Jeweler) => {
     startTransition(async () => {
       const updated = await adminSetJewelerActiveAction(j.id, !j.active);
+      if (updated)
+        setJewelers((js) => js.map((x) => (x.id === j.id ? updated : x)));
+    });
+  };
+  const approveJeweler = (j: Jeweler) => {
+    startTransition(async () => {
+      const updated = await adminSetJewelerApprovedAction(j.id, true);
       if (updated)
         setJewelers((js) => js.map((x) => (x.id === j.id ? updated : x)));
     });
@@ -158,6 +166,21 @@ export function AdminPanel({
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {!j.approved ? (
+                  <>
+                    <span className="label-caps rounded-[4px] border border-[var(--gold)] bg-[var(--warn-bg)] px-2 py-1 text-[9px] text-[var(--warn-text)]">
+                      Pendiente de aprobación
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => approveJeweler(j)}
+                      disabled={pending}
+                      className="rounded-[6px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
+                    >
+                      Aprobar
+                    </button>
+                  </>
+                ) : null}
                 <span
                   className={`label-caps rounded-[4px] border px-2 py-1 text-[9px] ${
                     j.active

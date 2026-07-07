@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { repo } from "@/lib/repo";
 import { UserMenu } from "@/components/user-menu";
+import { PendingApproval } from "@/components/pending-approval";
 import { ShipmentBoard } from "@/components/shipments/shipment-board";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +16,11 @@ export default async function EmbarquesPage() {
   const session = await auth();
   const user = session?.user ?? null;
   const jeweler = user?.jewelerId ? await repo.getJeweler(user.jewelerId) : null;
+
+  // Cuenta registrada pero aún no aprobada por NewCo → sin inventario.
+  if (user?.role === "jeweler" && jeweler && !jeweler.approved) {
+    return <PendingApproval name={jeweler.name} />;
+  }
 
   return (
     <main className="flex-1">

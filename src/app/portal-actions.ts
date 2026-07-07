@@ -10,7 +10,11 @@ import type {
   Order,
   ShippingAddress,
   PaymentMethod,
+  Settings,
+  Shipment,
+  ShipmentStatus,
 } from "@/lib/types";
+import { DEFAULT_OP } from "@/lib/quote";
 
 /* --------------------------- guards (servidor) ---------------------------- */
 
@@ -79,6 +83,98 @@ export async function adminSaveBandsAction(
 ): Promise<MarginBand[]> {
   await requireAdmin();
   return repo.saveBands(bands);
+}
+
+export async function adminSetJewelerApprovedAction(
+  id: string,
+  approved: boolean,
+): Promise<Jeweler | null> {
+  await requireAdmin();
+  return (await repo.setJewelerApproved(id, approved)) ?? null;
+}
+
+/* ----------------------------- admin: config ------------------------------ */
+
+export async function adminSaveSettingsAction(
+  patch: Partial<Settings>,
+): Promise<Settings> {
+  await requireAdmin();
+  return repo.saveSettings(patch);
+}
+
+/* --------------------------- admin: embarques ----------------------------- */
+
+/** Embarque enriquecido para el panel (conteos, confirmaciones). */
+export interface AdminShipmentInfo {
+  shipment: Shipment;
+  orderCount: number;
+  confirmedCount: number;
+}
+
+async function enrich(s: Shipment): Promise<AdminShipmentInfo> {
+  const orders = (
+    await Promise.all(s.orderIds.map((id) => repo.getOrder(id)))
+  ).filter((o): o is Order => Boolean(o));
+  return {
+    shipment: s,
+    orderCount: orders.length,
+    confirmedCount: orders.filter((o) => o.finalCostConfirmed).length,
+  };
+}
+
+export async function adminListShipmentsAction(): Promise<AdminShipmentInfo[]> {
+  await requireAdmin();
+  const list = await repo.listShipments();
+  return Promise.all(list.map(enrich));
+}
+
+export async function adminCreateShipmentAction(
+  weekLabel: string,
+  cutoffAt: string,
+): Promise<AdminShipmentInfo> {
+  await requireAdmin();
+  return enrich(await repo.createShipment(weekLabel, cutoffAt));
+}
+
+/**
+ * Corte semanal: cierra el embarque y CONGELA los costos fijos con el número
+ * real de piedras. Después cada joyero confirma su costo final.
+ */
+export async function adminCloseShipmentAction(
+  id: string,
+  frozenLogiMxn?: number,
+  frozenAgenteMxn?: number,
+): Promise<AdminShipmentInfo | null> {
+  await requireAdmin();
+  const s = await repo.closeShipment(id, {
+    frozenLogiMxn: frozenLogiMxn ?? DEFAULT_OP.logiMxn,
+    frozenAgenteMxn: frozenAgenteMxn ?? DEFAULT_OP.agenteMxn,
+  });
+  return s ? enrich(s) : null;
+}
+
+/**
+ * Avanza el embarque. ZARPAR (en_transito) exige que TODOS los joyeros hayan
+ * confirmado su costo final — nunca se dispara la importación sin confirmar.
+ */
+export async function adminAdvanceShipmentAction(
+  id: string,
+  status: ShipmentStatus,
+): Promise<{ ok: boolean; error?: string; info?: AdminShipmentInfo }> {
+  await requireAdmin();
+  const current = await repo.getShipment(id);
+  if (!current) return { ok: false, error: "Embarque no encontrado." };
+  if (status === "en_transito") {
+    const info = await enrich(current);
+    if (info.confirmedCount < info.orderCount) {
+      return {
+        ok: false,
+        error: `Faltan confirmaciones de costo final (${info.confirmedCount}/${info.orderCount}).`,
+      };
+    }
+  }
+  const s = await repo.advanceShipmentStatus(id, status);
+  return s ? { ok: true, info: await enrich(s) } : { ok: false };
 }
 
 /* -------------------------------- compras --------------------------------- */
