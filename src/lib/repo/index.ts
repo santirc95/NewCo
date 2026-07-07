@@ -49,8 +49,10 @@ export interface ConfirmOrderInput {
 }
 
 /**
- * OPCIÓN A: al elegir método el joyero PAGA; después NewCo compra al proveedor
- * y se suelta el hold. Si es consolidada, la orden entra al embarque.
+ * PAGO 1 (Opción A): al elegir método el joyero paga EL COSTO DE LA PIEDRA;
+ * con eso NewCo compra al proveedor y se suelta el hold. Si es consolidada,
+ * la orden entra al embarque (la logística se paga al corte — Pago 2). La
+ * directa cubre piedra + logística en el mismo momento, ambos por adelantado.
  */
 export interface PayOrderInput {
   orderId: string;
@@ -110,7 +112,8 @@ export interface Repo {
     stage: OrderStage,
     note?: string,
   ): Promise<Order | undefined>;
-  confirmFinalCost(orderId: string): Promise<Order | undefined>;
+  /** PAGO 2: saldo logístico confirmado y pagado al corte (nunca sin confirmar). */
+  payLogistics(orderId: string, paymentRef: string): Promise<Order | undefined>;
   listOrders(jewelerId: string): Promise<Order[]>;
   getOrder(orderId: string): Promise<Order | undefined>;
 

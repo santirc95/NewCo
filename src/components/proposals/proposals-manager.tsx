@@ -389,9 +389,9 @@ function ProposalRow({
 
         {order?.importMethod ? (
           <span className="tabular rounded-[8px] border border-[#3f7a5e] bg-[rgba(79,157,121,0.08)] px-3 py-2 text-[12px] text-[#4f9d79]">
-            Pagada · {order.jewelerPaymentRef} ·{" "}
+            Piedra pagada · {order.jewelerPaymentRef} ·{" "}
             {order.importMethod === "consolidada"
-              ? "en embarque semanal"
+              ? "en embarque · logística al corte"
               : "importación directa"}
           </span>
         ) : null}

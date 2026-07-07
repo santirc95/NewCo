@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { repo } from "@/lib/repo";
+import { payments } from "@/lib/payments";
 import {
   computeQuote,
   resolveMargin,
@@ -20,15 +21,17 @@ import type {
 export interface MyShipmentOrder {
   orderId: string;
   label: string;
-  paidMxn: number;
-  projectedMxn: number;
-  /** Ajuste estimado a favor (+) o en contra (−) al cierre. */
-  deltaMxn: number;
-  finalCostConfirmed: boolean;
+  /** Pago 1 ya realizado: el costo de la piedra. */
+  stoneMxn: number;
+  /** Pago 2: saldo logístico + impuestos + servicio + IVA (proyección/congelado). */
+  saldoMxn: number;
+  logisticsPaid: boolean;
+  reboteCount: number;
+  projectedMxn: number; // all-in por pieza (con IVA)
   // Desglose vivo de la simulación consolidada (sólo para piedras propias):
   landedMxn: number;
   serviceMxn: number;
-  priceMxn: number;
+  priceMxn: number; // por pieza SIN IVA (price_i)
   fixedShareMxn: number; // flete+agente prorrateado a esta piedra
 }
 
@@ -114,14 +117,14 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
       const line = consolidated.lines.find((l) => l.stoneId === o.id);
       if (!line) continue;
       const projected = line.price * (1 + IVA_RATE);
-      const paid = o.quoteSnapshot.allin;
       myOrders.push({
         orderId: o.id,
         label: `${(o.stoneSnapshot.carat ?? 0).toFixed(2)} ct · ${o.stoneSnapshot.shape ?? ""}`,
-        paidMxn: paid,
+        stoneMxn: line.stoneMxn,
+        saldoMxn: projected - line.stoneMxn,
+        logisticsPaid: Boolean(o.finalCostConfirmed),
+        reboteCount: o.reboteCount ?? 0,
         projectedMxn: projected,
-        deltaMxn: paid - projected,
-        finalCostConfirmed: Boolean(o.finalCostConfirmed),
         landedMxn: line.landed,
         serviceMxn: line.marginAmt,
         priceMxn: line.price,
@@ -178,13 +181,44 @@ export async function getShipmentLegendAction(): Promise<ShipmentLegend | null> 
   };
 }
 
-/** El joyero confirma su costo final al cierre (nunca se cobra sin confirmar). */
-export async function confirmFinalCostAction(orderId: string): Promise<boolean> {
+/**
+ * PAGO 2 — al corte: el joyero confirma y paga su saldo logístico congelado
+ * (nunca se cobra un costo no confirmado; nunca viaja sin pagar).
+ */
+export async function payLogisticsAction(orderId: string): Promise<boolean> {
   const s = await auth();
   const jewelerId = s?.user?.jewelerId;
   if (!jewelerId) return false;
   const o = await repo.getOrder(orderId);
-  if (!o || o.jewelerId !== jewelerId) return false;
-  await repo.confirmFinalCost(orderId);
+  if (!o || o.jewelerId !== jewelerId || o.finalCostConfirmed) return false;
+  const shipment = o.shipmentId ? await repo.getShipment(o.shipmentId) : null;
+  if (!shipment || shipment.status !== "cerrado") return false; // sólo al corte
+
+  // Saldo con costos CONGELADOS: all-in de su línea consolidada − piedra ya pagada.
+  const orders = (
+    await Promise.all(shipment.orderIds.map((id) => repo.getOrder(id)))
+  ).filter((x): x is Order => Boolean(x));
+  const bands = await repo.listBands();
+  const op = {
+    ...DEFAULT_OP,
+    logiMxn: shipment.frozenLogiMxn ?? DEFAULT_OP.logiMxn,
+    agenteMxn: shipment.frozenAgenteMxn ?? DEFAULT_OP.agenteMxn,
+  };
+  const lines: QuoteLineInput[] = orders.map((x) => {
+    const usd = x.stoneSnapshot.supplierPriceUsd ?? x.totalUsd;
+    return {
+      stoneId: x.id,
+      supplierPriceUsd: usd,
+      marginPct: resolveMargin({ supplierPriceUsd: usd } as Stone, null, bands),
+    };
+  });
+  const q = computeQuote(lines, op);
+  const line = q.lines.find((l) => l.stoneId === o.id);
+  if (!line) return false;
+  const saldo = line.price * (1 + IVA_RATE) - line.stoneMxn;
+
+  const pay = await payments.charge(saldo);
+  if (pay.status !== "confirmado") return false;
+  await repo.payLogistics(orderId, pay.ref);
   return true;
 }

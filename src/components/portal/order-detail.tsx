@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { Order, Shape } from "@/lib/types";
 import { formatMXN } from "@/lib/compute";
-import { stagesForMethod } from "@/lib/order-stages";
+import { stagesForMethod, STAGE_LABEL } from "@/lib/order-stages";
 import { GemTile } from "@/components/gem-icon";
 import { advanceOrderAction } from "@/app/portal-actions";
 
@@ -24,6 +24,9 @@ export function OrderDetail({ order: initial }: { order: Order }) {
   const stages = stagesForMethod(order.importMethod);
   const trackingMap = new Map(order.tracking.map((t) => [t.stage, t]));
   const complete = stages.every((s) => trackingMap.has(s.stage));
+  // Eventos EXCEPCIONALES fuera del camino feliz (p. ej. pendiente_logistica).
+  const stageSet = new Set(stages.map((s) => s.stage));
+  const exceptions = order.tracking.filter((t) => !stageSet.has(t.stage));
 
   const advance = () => {
     startTransition(async () => {
@@ -118,6 +121,19 @@ export function OrderDetail({ order: initial }: { order: Order }) {
             })}
           </ol>
 
+          {exceptions.length > 0 ? (
+            <div className="mb-2 flex flex-col gap-1.5">
+              {exceptions.map((e, i) => (
+                <p
+                  key={i}
+                  className="rounded-[6px] border border-[rgba(158,68,39,0.35)] bg-[rgba(158,68,39,0.08)] px-3 py-2 text-[11.5px] leading-snug text-[var(--secondary)]"
+                >
+                  ⚠ {STAGE_LABEL[e.stage]} · {fechaHora(e.at)}
+                  {e.note ? ` — ${e.note}` : ""}
+                </p>
+              ))}
+            </div>
+          ) : null}
           {order.importMethod === "consolidada" ? (
             <Link
               href="/embarques"
@@ -129,6 +145,11 @@ export function OrderDetail({ order: initial }: { order: Order }) {
           {!order.importMethod ? (
             <p className="mt-1 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-center text-[11.5px] text-[var(--warn-text)]">
               Elige el método de importación y paga para avanzar (en Propuestas).
+            </p>
+          ) : !order.finalCostConfirmed ? (
+            <p className="mt-1 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-center text-[11.5px] leading-snug text-[var(--warn-text)]">
+              Pago 2 pendiente: el saldo logístico se confirma y paga al corte
+              del embarque. Sin él, la piedra no viaja.
             </p>
           ) : !complete ? (
             <button
@@ -191,11 +212,12 @@ export function OrderDetail({ order: initial }: { order: Order }) {
               </div>
               {order.finalCostConfirmed ? (
                 <p className="mt-1 text-[11px] text-[#4f9d79]">
-                  ✓ Costo final confirmado al cierre del embarque
+                  ✓ Ambos pagos cubiertos por adelantado (piedra + logística)
                 </p>
               ) : order.importMethod === "consolidada" ? (
                 <p className="mt-1 text-[10.5px] text-[var(--outline)]">
-                  Proyección — se congela y la confirmas al cierre del embarque.
+                  Pago 1 (piedra) cubierto · el saldo logístico se congela y se
+                  paga al corte del embarque (Pago 2).
                 </p>
               ) : null}
             </div>

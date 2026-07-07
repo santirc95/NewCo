@@ -106,10 +106,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV4?: DB };
+const g = globalThis as unknown as { __newcoDbV41?: DB };
 const db: DB =
-  g.__newcoDbV4 ??
-  (g.__newcoDbV4 = (() => {
+  g.__newcoDbV41 ??
+  (g.__newcoDbV41 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
@@ -310,9 +310,14 @@ export const memoryRepo: Repo = {
     o.jewelerPaymentRef = input.paymentRef;
     o.folio = o.folio ?? nextFolio();
     // Regla de oro: el pago ANTECEDE a la compra al proveedor.
-    o.tracking.push({ stage: "pago_confirmado", at: now() });
+    o.tracking.push({
+      stage: "pago_piedra",
+      at: now(),
+      note: `Pago 1 · ${input.paymentRef}`,
+    });
     o.tracking.push({ stage: "comprada_proveedor", at: now() });
     // La piedra ya es de NewCo → se suelta el hold (deja de correr el reloj).
+    // Queda resguardada con el proveedor hasta que su embarque esté pagado.
     const h = db.holds.find((x) => x.id === o.holdId);
     if (h) h.status = "converted";
     const p = proposalOfOrder(o);
@@ -327,8 +332,27 @@ export const memoryRepo: Repo = {
       o.tracking.push({ stage: "en_embarque", at: now(), note: s?.weekLabel });
       if (p) p.status = "en_embarque";
     } else {
+      // Directa: piedra + logística en el mismo momento (ambos por adelantado).
+      o.tracking.push({
+        stage: "pago_logistica",
+        at: now(),
+        note: `Pago 2 · ${input.paymentRef}`,
+      });
+      o.finalCostConfirmed = true;
       if (p) p.status = "importando";
     }
+    return o;
+  },
+
+  async payLogistics(orderId, paymentRef) {
+    const o = db.orders.find((x) => x.id === orderId);
+    if (!o) return undefined;
+    o.tracking.push({
+      stage: "pago_logistica",
+      at: now(),
+      note: `Pago 2 · ${paymentRef}`,
+    });
+    o.finalCostConfirmed = true;
     return o;
   },
 
@@ -341,13 +365,6 @@ export const memoryRepo: Repo = {
       if (stage === "entregado") p.status = "entregada";
       else if (stage === "en_transito") p.status = "importando";
     }
-    return o;
-  },
-
-  async confirmFinalCost(orderId) {
-    const o = db.orders.find((x) => x.id === orderId);
-    if (!o) return undefined;
-    o.finalCostConfirmed = true;
     return o;
   },
 
@@ -398,10 +415,58 @@ export const memoryRepo: Repo = {
     if (!s) return undefined;
     s.status = status;
     if (status === "en_transito") {
-      // El barco zarpa: todas sus órdenes pasan a tránsito.
+      // El barco zarpa SÓLO con piedras con logística pagada (Pago 2).
+      // Las no pagadas REBOTAN al siguiente embarque (límite 3).
+      const viajan: string[] = [];
       for (const orderId of s.orderIds) {
-        await this.advanceOrder(orderId, "en_transito", s.weekLabel);
+        const o = db.orders.find((x) => x.id === orderId);
+        if (!o) continue;
+        if (o.finalCostConfirmed) {
+          viajan.push(orderId);
+          await this.advanceOrder(orderId, "en_transito", s.weekLabel);
+          continue;
+        }
+        o.reboteCount = (o.reboteCount ?? 0) + 1;
+        if (o.reboteCount >= 3) {
+          // Evita rebote infinito: pasa a gestión del admin.
+          o.shipmentId = undefined;
+          o.tracking.push({
+            stage: "pendiente_logistica",
+            at: now(),
+            note: "3 embarques sin cubrir la logística — gestionar con NewCo",
+          });
+          continue;
+        }
+        // Busca (o abre) el siguiente embarque de la semana próxima.
+        let next = db.shipments.find(
+          (x) => x.id !== s.id && x.status === "abierto",
+        );
+        if (!next) {
+          const cutoff = new Date(
+            new Date(s.cutoffAt).getTime() + 7 * 86400000,
+          );
+          const label = cutoff.toLocaleDateString("es-MX", {
+            day: "2-digit",
+            month: "long",
+          });
+          next = {
+            id: shortId("EMB"),
+            weekLabel: `Embarque · corte ${label}`,
+            cutoffAt: cutoff.toISOString(),
+            status: "abierto",
+            orderIds: [],
+          };
+          db.shipments.push(next);
+        }
+        next.orderIds.push(o.id);
+        o.shipmentId = next.id;
+        o.tracking.push({
+          stage: "en_embarque",
+          at: now(),
+          note: `Rebotó al ${next.weekLabel} — su costo logístico se ajustará según ese embarque`,
+        });
       }
+      s.orderIds = viajan; // el barco se va sólo con las pagadas
     }
     return s;
   },

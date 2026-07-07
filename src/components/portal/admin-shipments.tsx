@@ -90,8 +90,9 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
             Embarques
           </h2>
           <p className="mt-1 text-[12.5px] text-[var(--on-surface-variant)]">
-            Corte semanal: cerrar congela los costos fijos; zarpar exige que
-            todos confirmen su costo final.
+            Corte semanal: cerrar congela los costos fijos. Al zarpar sólo
+            viajan piedras con logística pagada; las demás rebotan al siguiente
+            embarque.
           </p>
         </div>
         <button
@@ -158,7 +159,7 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
                   Corte {fechaHora(s.cutoffAt)} · {orderCount}{" "}
                   {orderCount === 1 ? "piedra" : "piedras"}
                   {s.status !== "abierto"
-                    ? ` · confirmaciones ${confirmedCount}/${orderCount}`
+                    ? ` · logística pagada ${confirmedCount}/${orderCount}`
                     : ""}
                   {s.frozenLogiMxn !== undefined
                     ? ` · congelado: flete ${formatMXN(s.frozenLogiMxn)} + agente ${formatMXN(s.frozenAgenteMxn ?? 0)}`
@@ -182,6 +183,7 @@ export function AdminShipments({ initial }: { initial: AdminShipmentInfo[] }) {
                     type="button"
                     onClick={() => advance(s.id, "en_transito")}
                     disabled={pending}
+                    title="Sólo viajan piedras con logística pagada; las demás rebotan al siguiente embarque (límite 3)"
                     className="rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
                   >
                     Zarpar

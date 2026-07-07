@@ -154,27 +154,24 @@ export async function adminCloseShipmentAction(
 }
 
 /**
- * Avanza el embarque. ZARPAR (en_transito) exige que TODOS los joyeros hayan
- * confirmado su costo final — nunca se dispara la importación sin confirmar.
+ * Avanza el embarque. Al ZARPAR (en_transito), sólo viajan las piedras con
+ * logística pagada (Pago 2); las no pagadas REBOTAN al siguiente embarque
+ * (recalculan logística; límite 3 → "pendiente de logística").
  */
 export async function adminAdvanceShipmentAction(
   id: string,
   status: ShipmentStatus,
-): Promise<{ ok: boolean; error?: string; info?: AdminShipmentInfo }> {
+): Promise<{ ok: boolean; error?: string; info?: AdminShipmentInfo; bounced?: number }> {
   await requireAdmin();
   const current = await repo.getShipment(id);
   if (!current) return { ok: false, error: "Embarque no encontrado." };
+  let bounced = 0;
   if (status === "en_transito") {
     const info = await enrich(current);
-    if (info.confirmedCount < info.orderCount) {
-      return {
-        ok: false,
-        error: `Faltan confirmaciones de costo final (${info.confirmedCount}/${info.orderCount}).`,
-      };
-    }
+    bounced = info.orderCount - info.confirmedCount;
   }
   const s = await repo.advanceShipmentStatus(id, status);
-  return s ? { ok: true, info: await enrich(s) } : { ok: false };
+  return s ? { ok: true, info: await enrich(s), bounced } : { ok: false };
 }
 
 /* -------------------------------- compras --------------------------------- */
@@ -200,8 +197,8 @@ export async function advanceOrderAction(orderId: string): Promise<Order | null>
   const id = await requireJewelerId();
   const order = await repo.getOrder(orderId);
   if (!order || order.jewelerId !== id) return null;
-  // Sólo avanza tras elegir método y pagar (Opción A).
-  if (!order.importMethod) return order;
+  // Sólo avanza con método elegido y AMBOS pagos cubiertos (nunca sin Pago 2).
+  if (!order.importMethod || !order.finalCostConfirmed) return order;
   const done = new Set(order.tracking.map((t) => t.stage));
   const next = stagesForMethod(order.importMethod).find(
     (s) => !done.has(s.stage),

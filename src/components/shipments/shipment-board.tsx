@@ -7,7 +7,7 @@ import { AnimatedNumber } from "@/components/animated-number";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
-  confirmFinalCostAction,
+  payLogisticsAction,
   type ShipmentBoard as Board,
 } from "@/app/shipment-actions";
 
@@ -144,9 +144,9 @@ export function ShipmentBoard() {
   }
 
   const st = SHIP_STATUS[board.status];
-  const confirmFinal = (orderId: string) => {
+  const payLogistics = (orderId: string) => {
     startTransition(async () => {
-      await confirmFinalCostAction(orderId);
+      await payLogisticsAction(orderId);
       refresh();
     });
   };
@@ -344,31 +344,43 @@ export function ShipmentBoard() {
                 <div>
                   <div className="tabular text-[13.5px] font-medium text-[var(--on-surface)]">
                     ◆ {o.label}
+                    {o.reboteCount > 0 ? (
+                      <span className="label-caps ml-2 rounded-[3px] border border-[var(--gold)] bg-[var(--warn-bg)] px-1.5 py-0.5 text-[8px] text-[var(--warn-text)]">
+                        Rebotó ×{o.reboteCount} · logística ajustada a este embarque
+                      </span>
+                    ) : null}
                   </div>
                   <div className="tabular mt-0.5 text-[11px] text-[var(--on-surface-variant)]">
-                    Pagaste {formatMXN(o.paidMxn)}
+                    Pago 1 · piedra pagada {formatMXN(o.stoneMxn)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {o.deltaMxn > 1 ? (
-                    <span className="label-caps rounded-[4px] bg-[rgba(95,163,130,0.15)] px-2 py-1 text-[9px] text-[#3f7a5e]">
-                      {board.frozen ? "Ajuste a favor" : "Ajuste estimado a favor"}{" "}
-                      {formatMXN(o.deltaMxn)}
+                  {!o.logisticsPaid ? (
+                    <span className="label-caps rounded-[4px] border border-[var(--hairline)] px-2 py-1 text-[9px] text-[var(--on-surface-variant)]">
+                      Saldo logístico{" "}
+                      {board.frozen ? "congelado" : "estimado"}{" "}
+                      {formatMXN(o.saldoMxn)}
                     </span>
                   ) : null}
-                  {board.status === "cerrado" && !o.finalCostConfirmed ? (
+                  {board.status === "cerrado" && !o.logisticsPaid ? (
                     <button
                       type="button"
-                      onClick={() => confirmFinal(o.orderId)}
+                      onClick={() => payLogistics(o.orderId)}
                       disabled={pending}
                       className="rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
                     >
-                      Confirmar costo final
+                      {pending
+                        ? "Procesando…"
+                        : `Confirmar y pagar logística`}
                     </button>
                   ) : null}
-                  {o.finalCostConfirmed ? (
+                  {o.logisticsPaid ? (
                     <span className="text-[11.5px] text-[#4f9d79]">
-                      ✓ Costo confirmado
+                      ✓ Logística pagada — lista para zarpar
+                    </span>
+                  ) : board.status === "abierto" ? (
+                    <span className="text-[10.5px] text-[var(--outline)]">
+                      Pago 2 al corte
                     </span>
                   ) : null}
                 </div>
@@ -404,6 +416,14 @@ export function ShipmentBoard() {
                     </span>
                   </div>
                 </div>
+
+                {board.status === "cerrado" && !o.logisticsPaid ? (
+                  <p className="mt-2 rounded-[6px] bg-[var(--warn-bg)] px-2.5 py-1.5 text-[10.5px] leading-snug text-[var(--warn-text)]">
+                    Si no cubres la logística antes de zarpar, tu piedra pasa al
+                    siguiente embarque y su costo logístico se ajustará según ese
+                    embarque (límite: 3).
+                  </p>
+                ) : null}
 
                 {/* Desglose de la pieza dentro del embarque */}
                 <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--hairline)] pt-3">

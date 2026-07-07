@@ -223,12 +223,14 @@ export interface Hold {
   status: HoldStatus;
 }
 
-/** Etapas de trazabilidad de una orden (v4 — Opción A). */
+/** Etapas de trazabilidad de una orden (v4.1 — dos pagos por adelantado). */
 export type OrderStage =
   | "confirmada"
-  | "pago_confirmado"
+  | "pago_piedra" // Pago 1: el costo de la piedra (con esto NewCo compra)
   | "comprada_proveedor"
   | "en_embarque"
+  | "pago_logistica" // Pago 2: saldo logístico congelado al corte
+  | "pendiente_logistica" // 3 rebotes sin cubrir logística → gestión admin
   | "en_transito"
   | "en_aduana"
   | "nacionalizado"
@@ -261,8 +263,10 @@ export interface Order {
   shipmentId?: string;
   jewelerPaymentRef?: string;
   folio?: string; // folio de factura secuencial e inmutable al emitir
-  /** El joyero confirmó su costo final al cierre del embarque. */
+  /** Pago 2 realizado: logística confirmada y pagada (al corte). */
   finalCostConfirmed?: boolean;
+  /** Veces que la piedra rebotó de embarque sin cubrir logística (límite 3). */
+  reboteCount?: number;
   tracking: OrderStatus[];
   createdAt: string;
 }

@@ -83,9 +83,11 @@ export async function confirmOrderAction(
 }
 
 /**
- * OPCIÓN A: al elegir el método el joyero PAGA; con el pago confirmado NewCo
- * compra al proveedor (regla de oro) y se suelta el hold. Si es consolidada,
- * la orden se suma al embarque abierto.
+ * PAGO 1 (Opción A): al elegir el método el joyero paga POR ADELANTADO; con el
+ * pago confirmado NewCo compra al proveedor (regla de oro) y se suelta el hold.
+ * - Consolidada: paga SÓLO el costo de la piedra; la logística se congela y se
+ *   paga al corte (Pago 2). La piedra queda resguardada con el proveedor.
+ * - Directa: paga piedra + logística en el mismo momento (no hay corte).
  */
 export async function payOrderAction(
   token: string,
@@ -99,8 +101,13 @@ export async function payOrderAction(
     method === "consolidada" ? await repo.getOpenShipment() : undefined;
   if (method === "consolidada" && !shipment) return null; // sin barco abierto
 
-  // 1) Cobro al joyero (NewCo como principal).
-  const pay = await payments.charge(order.quoteSnapshot.allin);
+  // 1) Cobro al joyero (NewCo como principal). NewCo nunca financia.
+  const line = order.quoteSnapshot.lines[0];
+  const amount =
+    method === "consolidada"
+      ? (line?.stoneMxn ?? order.quoteSnapshot.allin) // Pago 1: la piedra
+      : order.quoteSnapshot.allin; // directa: piedra + logística
+  const pay = await payments.charge(amount);
   if (pay.status !== "confirmado") return null;
 
   // 2) Pago confirmado → método + folio + compra al proveedor + hold suelto.
