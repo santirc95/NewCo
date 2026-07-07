@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
 import { HeroCard } from "@/components/hero-card";
+import { AnimatedNumber } from "@/components/animated-number";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
@@ -345,9 +346,7 @@ export function ShipmentBoard() {
                     ◆ {o.label}
                   </div>
                   <div className="tabular mt-0.5 text-[11px] text-[var(--on-surface-variant)]">
-                    Pagaste {formatMXN(o.paidMxn)} ·{" "}
-                    {board.frozen ? "costo final" : "proyección actual"}{" "}
-                    {formatMXN(o.projectedMxn)}
+                    Pagaste {formatMXN(o.paidMxn)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -375,19 +374,45 @@ export function ShipmentBoard() {
                 </div>
                 </div>
 
-                {/* Simulación viva de ESTA piedra dentro del embarque */}
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[var(--hairline)] pt-3 sm:grid-cols-4">
+                {/* Costo POR PIEZA — prorrateo vivo (price_i de computeQuote).
+                    Sin IVA protagonista: es el costo real del joyero (el IVA
+                    se acredita); el con IVA es el desembolso, de apoyo. */}
+                <div className="mt-3 border-t border-[var(--hairline)] pt-3">
+                  <div className="label-caps text-[8.5px] text-[var(--outline)]">
+                    {board.frozen
+                      ? "Costo por pieza · congelado al cierre"
+                      : "Costo por pieza · estimado según el embarque actual"}
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                    <AnimatedNumber
+                      value={o.priceMxn}
+                      format={formatMXN}
+                      className="tabular text-[21px] font-bold text-[var(--warn-text)]"
+                    />
+                    <span className="text-[11px] text-[var(--on-surface-variant)]">
+                      sin IVA
+                    </span>
+                    <span aria-hidden className="text-[var(--outline)]">·</span>
+                    <AnimatedNumber
+                      value={o.projectedMxn}
+                      format={formatMXN}
+                      duration={0.5}
+                      className="tabular text-[13px] text-[var(--on-surface-variant)]"
+                    />
+                    <span className="text-[11px] text-[var(--outline)]">
+                      con IVA
+                    </span>
+                  </div>
+                </div>
+
+                {/* Desglose de la pieza dentro del embarque */}
+                <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--hairline)] pt-3">
                   <MiniStat
                     label="Flete+agente (tu parte)"
                     value={formatMXN(o.fixedShareMxn)}
                   />
                   <MiniStat label="Costo aterrizado" value={formatMXN(o.landedMxn)} />
                   <MiniStat label="Servicio NewCo" value={formatMXN(o.serviceMxn)} />
-                  <MiniStat
-                    label={board.frozen ? "All-in final" : "All-in proyectado"}
-                    value={formatMXN(o.projectedMxn)}
-                    gold
-                  />
                 </div>
               </div>
             ))}
