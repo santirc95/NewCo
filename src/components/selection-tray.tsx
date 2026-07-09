@@ -19,6 +19,7 @@ export function SelectionTray() {
   const sel = useSelection();
   const router = useRouter();
   const [genOpen, setGenOpen] = useState(false);
+  const [confirmOrder, setConfirmOrder] = useState(false);
   const [created, setCreated] = useState(false);
   const [ordering, startOrder] = useTransition();
   const hasSel = sel.selected.length > 0;
@@ -34,9 +35,11 @@ export function SelectionTray() {
   };
 
   // Orden directa (sin cliente): pone las piezas en firme y lleva a Propuestas
-  // para elegir método (embarque / individual).
+  // para elegir método (embarque / individual). Confirmación previa: dispara
+  // el hold, no debe pasar por un clic accidental.
   const orderDirect = () => {
     const ids = sel.selected;
+    setConfirmOrder(false);
     startOrder(async () => {
       await confirmDirectOrderAction(ids);
       sel.clear();
@@ -82,7 +85,7 @@ export function SelectionTray() {
             </button>
             <button
               type="button"
-              onClick={orderDirect}
+              onClick={() => setConfirmOrder(true)}
               disabled={ordering}
               title="Pon las piezas en firme sin cliente y elige el método en Propuestas"
               className="label-caps inline-flex items-center gap-2 rounded-[6px] border border-[var(--gold)] px-4 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50"
@@ -108,7 +111,83 @@ export function SelectionTray() {
           onCreated={() => setCreated(true)}
         />
       ) : null}
+
+      {confirmOrder ? (
+        <ConfirmOrderModal
+          count={sel.selected.length}
+          pending={ordering}
+          onConfirm={orderDirect}
+          onCancel={() => setConfirmOrder(false)}
+          onProposalInstead={() => {
+            setConfirmOrder(false);
+            setGenOpen(true);
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+function ConfirmOrderModal({
+  count,
+  pending,
+  onConfirm,
+  onCancel,
+  onProposalInstead,
+}: {
+  count: number;
+  pending: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+  onProposalInstead: () => void;
+}) {
+  return (
+    <div
+      className="no-print fixed inset-0 z-50 flex items-center justify-center bg-[rgba(28,24,20,0.45)] p-4 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-6 shadow-[var(--shadow-card-hover)]">
+        <h3 className="text-[18px] font-semibold text-[var(--on-surface)]">
+          ¿Poner {count === 1 ? "esta pieza" : `estas ${count} piezas`} en firme?
+        </h3>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--on-surface-variant)]">
+          Es una <b className="text-[var(--on-surface)]">orden directa para ti</b>
+          {" "}(sin cliente): {count === 1 ? "la pieza queda" : "las piezas quedan"}{" "}
+          apartada{count === 1 ? "" : "s"} en hold con el proveedor y luego eliges
+          el método (embarque o individual) en Propuestas.
+        </p>
+        <p className="mt-2 rounded-[6px] bg-[var(--warn-bg)] px-3 py-2 text-[11.5px] leading-snug text-[var(--warn-text)]">
+          ¿Querías mandarla a tu cliente para que elija? Usa “Armar propuesta”.
+        </p>
+
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={pending}
+          className="mt-5 w-full rounded-[8px] bg-[var(--primary)] py-3 text-[13px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {pending ? "Ordenando…" : "Sí, poner en firme"}
+        </button>
+        <button
+          type="button"
+          onClick={onProposalInstead}
+          disabled={pending}
+          className="mt-2 w-full rounded-[8px] border border-[var(--hairline)] py-2.5 text-[12.5px] font-medium text-[var(--on-surface)] transition-colors hover:border-[var(--gold)] disabled:opacity-50"
+        >
+          Mejor armar propuesta para mi cliente
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending}
+          className="mt-2 w-full py-1.5 text-center text-[12.5px] text-[var(--outline)] hover:text-[var(--on-surface-variant)]"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
   );
 }
 
