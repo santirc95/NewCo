@@ -336,34 +336,36 @@ export function ShipmentBoard() {
             <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
             <LedgerRow label="Aduana (IGI + DTA + agente)" value={board.aggregate.composition.customs} marker="var(--c-aduana)" />
             {/* Renglón POR PIEDRA (propias con specs, ajenas anónimas). El
-                servicio va por pieza — sin suma global (percepción §7.3). */}
+                servicio va por pieza como COMPONENTE incluido en el precio —
+                sin suma global (percepción §7.3). */}
             <div className="px-2 py-2.5">
               <div className="label-caps mb-1.5 text-[8.5px] text-[var(--outline)]">
-                Costo por pieza · sin IVA{" "}
-                {board.frozen ? "· congelado" : "· proyección"}
+                Precio por pieza · sin IVA{" "}
+                {board.frozen ? "· congelado" : "· proyección"} · el servicio ya
+                está incluido
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {board.perStone.map((r, i) => (
                   <div
                     key={r.orderId}
-                    className="flex items-center justify-between gap-3"
+                    className="flex items-start justify-between gap-3"
                   >
-                    <span
-                      className={`tabular min-w-0 truncate text-[12px] ${
-                        r.mine
-                          ? "font-medium text-[var(--warn-text)]"
-                          : "text-[var(--on-surface-variant)]"
-                      }`}
-                    >
-                      {r.mine ? `◆ ${r.label} (tuya)` : `◈ Piedra ${i + 1} · anónima`}
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-2">
-                      <span className="tabular text-[10.5px] text-[var(--outline)]">
-                        servicio {formatMXN(r.serviceMxn)}
-                      </span>
-                      <span className="tabular text-[12.5px] font-medium text-[var(--on-surface)]">
-                        {formatMXN(r.priceMxn)}
-                      </span>
+                    <div className="min-w-0">
+                      <div
+                        className={`tabular truncate text-[12px] ${
+                          r.mine
+                            ? "font-medium text-[var(--warn-text)]"
+                            : "text-[var(--on-surface-variant)]"
+                        }`}
+                      >
+                        {r.mine ? `◆ ${r.label} (tuya)` : `◈ Piedra ${i + 1} · anónima`}
+                      </div>
+                      <div className="tabular text-[10px] text-[var(--outline)]">
+                        incluye servicio NewCo {formatMXN(r.serviceMxn)}
+                      </div>
+                    </div>
+                    <span className="tabular shrink-0 text-[13px] font-medium text-[var(--on-surface)]">
+                      {formatMXN(r.priceMxn)}
                     </span>
                   </div>
                 ))}
