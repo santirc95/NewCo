@@ -159,6 +159,13 @@ export async function payOrderAction(
   return (await repo.viewProposal(token)) ?? null;
 }
 
+/** stoneIds apartadas (Hold activo, no expirado) — para marcar el inventario. */
+export async function listHeldStoneIdsAction(): Promise<string[]> {
+  const s = await auth();
+  if (!s?.user) return [];
+  return repo.listHeldStoneIds();
+}
+
 /** Seguimiento del joyero: sus propuestas (o todas si admin). */
 export async function listProposalsAction(): Promise<ProposalView[]> {
   const jewelerId = await currentJewelerId();

@@ -307,6 +307,17 @@ export const memoryRepo: Repo = {
     if (!p) return undefined;
     return { proposal: p, hold: activeHold(p.id), order: orderOfProposal(p.id) };
   },
+  async listHeldStoneIds() {
+    const t = Date.now();
+    const ids = new Set<string>();
+    for (const h of db.holds) {
+      if (h.status === "active" && h.expiresAt > t) {
+        for (const id of h.stoneIds) ids.add(id);
+      }
+    }
+    return [...ids];
+  },
+
   async signalInterest(token, stoneId) {
     const p = db.proposals.get(token);
     if (!p || !p.stoneIds.includes(stoneId)) return p;

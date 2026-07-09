@@ -35,6 +35,7 @@ export const airtableRepo: Repo = {
   listProposals: todo,
   viewProposal: todo,
   signalInterest: todo,
+  listHeldStoneIds: todo,
   confirmOrder: todo,
   payOrder: todo,
   advanceOrder: todo,

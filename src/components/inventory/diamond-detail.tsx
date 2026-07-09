@@ -43,11 +43,11 @@ function C4({ k, v }: { k: string; v: string }) {
 
 export function DiamondDetail({
   stone,
-  priceUsd,
+  held,
   initialFav,
 }: {
   stone: Stone;
-  priceUsd: number;
+  held: boolean;
   initialFav: boolean;
 }) {
   const [fav, setFav] = useState(initialFav);
@@ -109,6 +109,11 @@ export function DiamondDetail({
             >
               <Heart active={fav} />
             </button>
+            {held ? (
+              <span className="label-caps absolute left-3 top-3 rounded-[5px] border border-[#3c5a6b] bg-[var(--surface)]/90 px-2.5 py-1.5 text-[10px] text-[#5e87a0] backdrop-blur">
+                Apartada · en hold
+              </span>
+            ) : null}
           </div>
           {!stone.photoUrl && !stone.videoUrl ? (
             <p className="mt-2 text-center text-[10.5px] text-[var(--outline)]">
@@ -142,13 +147,13 @@ export function DiamondDetail({
             </span>
           </div>
 
-          {/* Precio all-in */}
+          {/* Precio del proveedor (costo real de la API, sin importación/IVA) */}
           <div className="mt-4 flex items-baseline justify-between rounded-xl border border-[var(--hairline)] bg-[var(--surface-low)] px-4 py-3">
             <span className="label-caps text-[9px] text-[var(--outline)]">
-              Precio all-in al joyero
+              Precio proveedor
             </span>
             <span className="tabular text-[18px] font-semibold text-[var(--on-surface)]">
-              {formatUSD(priceUsd)}
+              {formatUSD(stone.supplierPriceUsd)}
             </span>
           </div>
 
@@ -200,30 +205,46 @@ export function DiamondDetail({
           </div>
 
           {/* Disponibilidad */}
-          <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-[#5fa382]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#5fa382]" aria-hidden />
-            Disponible · hold del proveedor {stone.holdWindowHours}h
-          </div>
+          {held ? (
+            <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-[#5e87a0]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5e87a0]" aria-hidden />
+              Apartada · en hold por otra orden — no disponible por ahora
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-[#5fa382]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5fa382]" aria-hidden />
+              Disponible · hold del proveedor {stone.holdWindowHours}h
+            </div>
+          )}
 
           {/* Acciones */}
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
             <button
               type="button"
               onClick={addToProposal}
-              disabled={atMax}
+              disabled={atMax || held}
+              title={
+                held
+                  ? "Esta piedra está apartada (en hold) por otra orden; no disponible por ahora."
+                  : undefined
+              }
               className={`flex-1 rounded-[10px] py-3 text-center text-[13px] font-medium transition-all ${
-                inProposal
-                  ? "border border-[var(--gold)] bg-[var(--warn-bg)] text-[var(--warn-text)]"
-                  : atMax
-                    ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
-                    : "bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90"
+                held
+                  ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+                  : inProposal
+                    ? "border border-[var(--gold)] bg-[var(--warn-bg)] text-[var(--warn-text)]"
+                    : atMax
+                      ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+                      : "bg-[var(--primary)] text-[var(--on-primary)] hover:opacity-90"
               }`}
             >
-              {inProposal
-                ? "✓ En propuesta"
-                : atMax
-                  ? "Propuesta llena (máx 4)"
-                  : "Agregar a propuesta"}
+              {held
+                ? "Apartada · no disponible"
+                : inProposal
+                  ? "✓ En propuesta"
+                  : atMax
+                    ? "Propuesta llena (máx 4)"
+                    : "Agregar a propuesta"}
             </button>
 
             <button

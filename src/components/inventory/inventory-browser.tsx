@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { quoteStones, DEFAULT_OP, DEFAULT_BANDS } from "@/lib/quote";
-import { getBandsAction } from "@/app/portal-actions";
 import {
   getMockStones,
   getMockStone,
@@ -13,12 +11,12 @@ import {
   CUTS,
   LABS,
 } from "@/lib/inventory";
-import type { Stone, MarginBand } from "@/lib/types";
+import type { Stone } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
 import { SimulateButtons } from "@/components/simulate-buttons";
 import { useSelection, MAX_SELECT } from "@/components/selection-provider";
-import { listProposalsAction } from "@/app/actions";
+import { listProposalsAction, listHeldStoneIdsAction } from "@/app/actions";
 import {
   listFavoriteIdsAction,
   addFavoriteAction,
@@ -46,20 +44,6 @@ export function InventoryBrowser({
   displayName?: string | null;
 }) {
   const stones = useMemo(() => getMockStones(), []);
-  const [bands, setBands] = useState<MarginBand[]>(DEFAULT_BANDS);
-  useEffect(() => {
-    getBandsAction()
-      .then((b) => b.length && setBands(b))
-      .catch(() => {});
-  }, []);
-
-  const allInUsd = useMemo(() => {
-    const m = new Map<string, number>();
-    stones.forEach((s) =>
-      m.set(s.id, quoteStones([s], DEFAULT_OP, null, bands).allin / DEFAULT_OP.fx),
-    );
-    return m;
-  }, [stones, bands]);
 
   // filtros
   const [shape, setShape] = useState<Multi>(new Set());
@@ -114,6 +98,18 @@ export function InventoryBrowser({
     return () => clearInterval(i);
   }, []);
 
+  // Piedras apartadas (Hold activo). Se marcan y bloquean; se liberan al expirar.
+  const [heldIds, setHeldIds] = useState<Multi>(new Set());
+  useEffect(() => {
+    const load = () =>
+      listHeldStoneIdsAction()
+        .then((ids) => setHeldIds(new Set(ids)))
+        .catch(() => {});
+    load();
+    const i = setInterval(load, 5000);
+    return () => clearInterval(i);
+  }, []);
+
   const filtered = useMemo(() => {
     const min = parseFloat(ctMin) || 0;
     const max = parseFloat(ctMax) || 99;
@@ -133,9 +129,9 @@ export function InventoryBrowser({
         clarityMatch(d.clarity) &&
         (cut.size === 0 || cut.has(d.cut)) &&
         (lab.size === 0 || lab.has(d.lab)) &&
-        (allInUsd.get(d.id) ?? 0) <= pMax,
+        d.supplierPriceUsd <= pMax,
     );
-  }, [stones, allInUsd, shape, type, color, clarity, cut, lab, ctMin, ctMax, priceMax]);
+  }, [stones, shape, type, color, clarity, cut, lab, ctMin, ctMax, priceMax]);
 
   const clearAll = () => {
     setShape(new Set());
@@ -254,7 +250,7 @@ export function InventoryBrowser({
                     style={{ boxShadow: "0 0 8px #5fa382" }}
                     aria-hidden
                   />
-                  Conectado a API de proveedor · precio all-in (USD) en vivo
+                  Conectado a API de proveedor · precio del proveedor (USD) en vivo
                 </div>
               </div>
               <div className="tabular text-[12.5px] text-[var(--on-surface-variant)]">
@@ -272,7 +268,7 @@ export function InventoryBrowser({
                   <StoneCard
                     key={d.id}
                     stone={d}
-                    priceUsd={allInUsd.get(d.id) ?? 0}
+                    held={heldIds.has(d.id)}
                     selected={sel.has(d.id)}
                     disabled={!sel.has(d.id) && sel.selected.length >= MAX_SELECT}
                     onToggle={() => sel.toggle(d.id)}
@@ -390,7 +386,7 @@ function MiniHeart({ active }: { active: boolean }) {
 
 function StoneCard({
   stone,
-  priceUsd,
+  held,
   selected,
   disabled,
   onToggle,
@@ -398,7 +394,7 @@ function StoneCard({
   onToggleFav,
 }: {
   stone: Stone;
-  priceUsd: number;
+  held: boolean;
   selected: boolean;
   disabled: boolean;
   onToggle: () => void;
@@ -412,7 +408,7 @@ function StoneCard({
         selected
           ? "border-[var(--gold)] shadow-[0_0_0_1px_var(--gold)]"
           : "border-[var(--hairline)] hover:border-[var(--hairline-strong)]"
-      }`}
+      } ${held ? "opacity-70" : ""}`}
     >
       <div className="relative">
         <Link href={detailHref} className="block">
@@ -423,6 +419,11 @@ function StoneCard({
             className="aspect-square w-full"
           />
         </Link>
+        {held ? (
+          <span className="label-caps absolute left-2 top-2 rounded-[4px] border border-[#3c5a6b] bg-[var(--surface)]/90 px-2 py-1 text-[9px] text-[#5e87a0] backdrop-blur">
+            Apartada · en hold
+          </span>
+        ) : null}
         <button
           type="button"
           onClick={onToggleFav}
@@ -463,26 +464,39 @@ function StoneCard({
       </Link>
       <div className="mt-auto flex items-baseline justify-between border-t border-[var(--hairline)] pt-2.5">
         <span className="label-caps text-[9px] text-[var(--outline)]">
-          Precio all-in
+          Precio proveedor
         </span>
         <span className="tabular text-[14px] font-semibold text-[var(--on-surface)]">
-          {formatUSD(priceUsd)}
+          {formatUSD(stone.supplierPriceUsd)}
         </span>
       </div>
       <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={onToggle}
-          disabled={disabled}
+          disabled={disabled || held}
+          title={
+            held
+              ? "Esta piedra está apartada (en hold) por otra orden; no disponible por ahora."
+              : undefined
+          }
           className={`rounded-[8px] py-2 text-[12.5px] font-medium transition-all ${
-            selected
-              ? "bg-[var(--primary)] text-[var(--on-primary)]"
-              : disabled
-                ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
-                : "border border-[var(--hairline)] bg-[var(--surface-low)] text-[var(--on-surface)] hover:border-[var(--gold)]"
+            held
+              ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+              : selected
+                ? "bg-[var(--primary)] text-[var(--on-primary)]"
+                : disabled
+                  ? "cursor-not-allowed border border-[var(--hairline)] text-[var(--outline)]"
+                  : "border border-[var(--hairline)] bg-[var(--surface-low)] text-[var(--on-surface)] hover:border-[var(--gold)]"
           }`}
         >
-          {selected ? "✓ En propuesta" : disabled ? "Máx 4" : "Agregar a propuesta"}
+          {held
+            ? "Apartada"
+            : selected
+              ? "✓ En propuesta"
+              : disabled
+                ? "Máx 4"
+                : "Agregar a propuesta"}
         </button>
         <SimulateButtons stone={stone} compact />
       </div>

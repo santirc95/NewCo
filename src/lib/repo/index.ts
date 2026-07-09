@@ -104,6 +104,8 @@ export interface Repo {
   listProposals(jewelerId?: string): Promise<ProposalView[]>;
   viewProposal(token: string): Promise<ProposalView | undefined>;
   signalInterest(token: string, stoneId: string): Promise<Proposal | undefined>;
+  /** stoneIds con un Hold ACTIVO y no expirado (apartadas). Global. */
+  listHeldStoneIds(): Promise<string[]>;
 
   // Órdenes (Opción A)
   confirmOrder(

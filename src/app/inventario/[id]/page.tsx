@@ -3,7 +3,6 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { repo } from "@/lib/repo";
 import { getMockStone } from "@/lib/inventory";
-import { quoteStones, DEFAULT_OP } from "@/lib/quote";
 import { DiamondDetail } from "@/components/inventory/diamond-detail";
 import { UserMenu } from "@/components/user-menu";
 
@@ -23,13 +22,10 @@ export default async function StonePage({
   const jewelerId = user?.jewelerId;
   const jeweler = jewelerId ? await repo.getJeweler(jewelerId) : null;
 
-  const bands = await repo.listBands();
-  const priceUsd =
-    quoteStones([stone], DEFAULT_OP, null, bands).allin / DEFAULT_OP.fx;
-
   const favIds = jewelerId
     ? (await repo.listFavorites(jewelerId)).map((f) => f.stoneId)
     : [];
+  const held = (await repo.listHeldStoneIds()).includes(stone.id);
 
   return (
     <main className="flex-1">
@@ -56,7 +52,7 @@ export default async function StonePage({
 
       <DiamondDetail
         stone={stone}
-        priceUsd={priceUsd}
+        held={held}
         initialFav={favIds.includes(stone.id)}
       />
     </main>
