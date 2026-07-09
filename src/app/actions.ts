@@ -118,8 +118,9 @@ export async function confirmOrderAction(
 /**
  * PAGO 1 (Opción A): al elegir el método el joyero paga POR ADELANTADO; con el
  * pago confirmado NewCo compra al proveedor (regla de oro) y se suelta el hold.
- * - Consolidada: paga la piedra + SU IVA (Pago 1); los gastos de importación y
- *   su IVA se pagan al corte (Pago 2). La piedra queda resguardada con el proveedor.
+ * - Consolidada: paga piedra + su IVA + IGI + DTA (pedimento) en el Pago 1;
+ *   flete/agente/servicio + su IVA se pagan al corte (Pago 2). La piedra queda
+ *   resguardada con el proveedor.
  * - Directa: paga todo el all-in en el mismo momento (no hay corte).
  */
 export async function payOrderAction(
@@ -138,7 +139,9 @@ export async function payOrderAction(
   const line = order.quoteSnapshot.lines[0];
   const amount =
     method === "consolidada"
-      ? (line?.stoneMxn ?? 0) * (1 + IVA_RATE) // Pago 1: piedra + su IVA
+      ? (line?.stoneMxn ?? 0) * (1 + IVA_RATE) +
+        (line?.igiAmt ?? 0) +
+        (line?.dtaAmt ?? 0) // Pago 1: piedra + IVA + IGI + DTA
       : order.quoteSnapshot.allin; // directa: todo el all-in
   const pay = await payments.charge(amount);
   if (pay.status !== "confirmado") return null;

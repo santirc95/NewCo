@@ -66,14 +66,16 @@ export async function simulateStoneAction(
   ): SimScenario | null => {
     const l = q.lines.find((x) => x.stoneId === stone.id);
     if (!l) return null;
+    // IGI y DTA no causan IVA; la base grava piedra + flete + agente + servicio.
+    const iva = (l.price - l.igiAmt - l.dtaAmt) * IVA_RATE;
     return {
       priceMxn: l.price,
-      allinMxn: l.price * (1 + IVA_RATE),
+      allinMxn: l.price + iva,
       stoneMxn: l.stoneMxn,
       fixedMxn: l.logiShare + l.agenteShare,
       aduanaMxn: l.igiAmt + l.dtaAmt,
       serviceMxn: l.marginAmt,
-      ivaMxn: l.price * IVA_RATE,
+      ivaMxn: iva,
     };
   };
 

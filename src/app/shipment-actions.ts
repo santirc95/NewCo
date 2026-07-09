@@ -38,9 +38,9 @@ export interface MyShipmentOrder {
   reboteCount: number;
   projectedMxn: number; // all-in por pieza (con IVA)
   // Desglose vivo — MISMAS categorías que el desglose agregado de arriba:
-  logisticsMxn: number; // flete + seguro internacional (tu parte)
-  aduanaMxn: number; // IGI + DTA + agente aduanal (tu parte)
-  serviceMxn: number; // servicio de importación NewCo
+  logisticsMxn: number; // flete + seguro internacional (Pago 2, con IVA)
+  agenteMxn: number; // agente aduanal (Pago 2, con IVA)
+  serviceMxn: number; // servicio de importación NewCo (Pago 2, con IVA)
   priceMxn: number; // por pieza SIN IVA (price_i)
 }
 
@@ -62,10 +62,11 @@ export interface PerStoneRow {
 export interface ShipmentAggregate {
   allin: number;
   price: number;
-  ivaOut: number;
-  ivaStoneMxn: number; // IVA de las piedras (cubierto en Pago 1)
-  ivaExpensesMxn: number; // IVA de los gastos de importación (Pago 2)
-  landedTotal: number;
+  ivaOut: number; // IVA acreditable total = IVA piedras + IVA gastos
+  ivaStoneMxn: number; // IVA de las piedras (Pago 1)
+  ivaExpensesMxn: number; // IVA de flete + agente + servicio (Pago 2)
+  pedimentoMxn: number; // IGI + DTA (Pago 1, sin IVA)
+  agenteMxn: number; // agente aduanal (Pago 2, con IVA)
   composition: { stone: number; logistics: number; customs: number; service: number };
 }
 
@@ -89,10 +90,10 @@ export interface ShipmentBoard {
   myPendingSaldoMxn: number;
   myPendingCount: number;
   myPendingLogisticsMxn: number; // flete + seguro internacional (tu parte)
-  myPendingAduanaMxn: number; // IGI + DTA + agente aduanal (tu parte)
+  myPendingAgenteMxn: number; // agente aduanal (tu parte)
   myPendingServiceMxn: number; // servicio de importación NewCo
-  myPendingIvaMxn: number; // IVA de los gastos (acreditable)
-  /** Pago 1 ya pagado (piedra + IVA) de esas piezas pendientes — contexto. */
+  myPendingIvaMxn: number; // IVA de flete + agente + servicio (acreditable)
+  /** Pago 1 ya pagado (piedra + IVA + IGI/DTA) de esas piezas — contexto. */
   myPendingPago1Mxn: number;
   /** Escalones de llenado (admin) + posición actual y siguiente. */
   tiers: ShipmentTier[];
@@ -177,7 +178,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   let myPendingSaldoMxn = 0;
   let myPendingCount = 0;
   let myPendingLogisticsMxn = 0;
-  let myPendingAduanaMxn = 0;
+  let myPendingAgenteMxn = 0;
   let myPendingServiceMxn = 0;
   let myPendingIvaMxn = 0;
   let myPendingPago1Mxn = 0;
@@ -186,18 +187,22 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
       if (o.jewelerId !== jewelerId) continue; // sólo lo propio
       const line = consolidated.lines.find((l) => l.stoneId === o.id);
       if (!line) continue;
-      const projected = line.price * (1 + IVA_RATE);
-      // PAGO 1 (ya pagado) = piedra + su IVA. PAGO 2 = gastos de importación
-      // (flete+agente + aduana + servicio) + IVA de esos gastos.
-      const pago1 = line.stoneMxn * (1 + IVA_RATE);
-      const saldo = o.finalCostConfirmed ? 0 : projected - pago1;
+      // PAGO 1 = piedra + IVA de piedra + IGI + DTA (pedimento, sin IVA).
+      // PAGO 2 = flete + agente + servicio + IVA de esos gastos.
+      const pedimento = line.igiAmt + line.dtaAmt;
+      const gastos = line.logiShare + line.agenteShare + line.marginAmt;
+      const ivaGastos = gastos * IVA_RATE;
+      const pago1 = line.stoneMxn * (1 + IVA_RATE) + pedimento;
+      const saldoFull = gastos + ivaGastos;
+      const projected = pago1 + saldoFull; // all-in por pieza (con IVA)
+      const saldo = o.finalCostConfirmed ? 0 : saldoFull;
       if (!o.finalCostConfirmed) {
         myPendingSaldoMxn += saldo;
         myPendingCount += 1;
         myPendingLogisticsMxn += line.logiShare;
-        myPendingAduanaMxn += line.igiAmt + line.dtaAmt + line.agenteShare;
+        myPendingAgenteMxn += line.agenteShare;
         myPendingServiceMxn += line.marginAmt;
-        myPendingIvaMxn += (line.price - line.stoneMxn) * IVA_RATE;
+        myPendingIvaMxn += ivaGastos;
         myPendingPago1Mxn += pago1;
       }
       myOrders.push({
@@ -210,12 +215,19 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
         reboteCount: o.reboteCount ?? 0,
         projectedMxn: projected,
         logisticsMxn: line.logiShare,
-        aduanaMxn: line.igiAmt + line.dtaAmt + line.agenteShare,
+        agenteMxn: line.agenteShare,
         serviceMxn: line.marginAmt,
         priceMxn: line.price,
       });
     }
   }
+
+  const aggPedimento = consolidated
+    ? consolidated.lines.reduce((x, l) => x + l.igiAmt + l.dtaAmt, 0)
+    : 0;
+  const aggAgente = consolidated
+    ? consolidated.lines.reduce((x, l) => x + l.agenteShare, 0)
+    : 0;
 
   return {
     perStone,
@@ -227,10 +239,11 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
           ivaStoneMxn: consolidated.composition.stone * IVA_RATE,
           ivaExpensesMxn:
             (consolidated.composition.logistics +
-              consolidated.composition.customs +
+              aggAgente +
               consolidated.composition.service) *
             IVA_RATE,
-          landedTotal: consolidated.landedTotal,
+          pedimentoMxn: aggPedimento,
+          agenteMxn: aggAgente,
           composition: consolidated.composition,
         }
       : null,
@@ -244,7 +257,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     myPendingSaldoMxn,
     myPendingCount,
     myPendingLogisticsMxn,
-    myPendingAduanaMxn,
+    myPendingAgenteMxn,
     myPendingServiceMxn,
     myPendingIvaMxn,
     myPendingPago1Mxn,
@@ -323,12 +336,15 @@ export async function payAllLogisticsAction(): Promise<boolean> {
   );
   if (mine.length === 0) return false;
 
-  // Pago 2 = all-in − Pago 1(piedra + su IVA) = gastos + IVA de gastos.
+  // Pago 2 = flete + agente + servicio + su IVA (la piedra, su IVA y el
+  // pedimento IGI/DTA ya se cubrieron en el Pago 1).
   let total = 0;
   for (const o of mine) {
     const line = q.lines.find((l) => l.stoneId === o.id);
-    if (line)
-      total += (line.price - line.stoneMxn) * (1 + IVA_RATE);
+    if (line) {
+      const gastos = line.logiShare + line.agenteShare + line.marginAmt;
+      total += gastos * (1 + IVA_RATE);
+    }
   }
   const pay = await payments.charge(total);
   if (pay.status !== "confirmado") return false;

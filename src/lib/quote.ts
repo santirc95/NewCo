@@ -123,9 +123,12 @@ export function computeQuote(lines: QuoteLineInput[], op: OpParams): Quote {
   const landedTotal = lq.reduce((s, l) => s + l.landed, 0);
   const marginAmt = lq.reduce((s, l) => s + l.marginAmt, 0);
   const price = landedTotal + marginAmt;
+  // IGI y DTA son derechos aduaneros: NO causan IVA. La base del IVA excluye
+  // esos montos (grava piedra + flete + agente + servicio).
+  const igiDtaTotal = lq.reduce((s, l) => s + l.igiAmt + l.dtaAmt, 0);
   const ivaImp =
-    lq.reduce((s, l) => s + (l.aduana + l.igiAmt + l.dtaAmt), 0) * IVA_RATE;
-  const ivaOut = price * IVA_RATE;
+    lq.reduce((s, l) => s + l.aduana, 0) * IVA_RATE;
+  const ivaOut = (price - igiDtaTotal) * IVA_RATE;
   const allin = price + ivaOut;
   const float = landedTotal + ivaImp;
 

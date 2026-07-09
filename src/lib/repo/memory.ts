@@ -111,10 +111,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV43?: DB };
+const g = globalThis as unknown as { __newcoDbV44?: DB };
 const db: DB =
-  g.__newcoDbV43 ??
-  (g.__newcoDbV43 = (() => {
+  g.__newcoDbV44 ??
+  (g.__newcoDbV44 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
