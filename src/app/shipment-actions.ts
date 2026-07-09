@@ -81,9 +81,13 @@ export interface ShipmentBoard {
   count: number;
   /** Piedras con logística PAGADA (las únicas que entran al cierre atómico). */
   paidCount: number;
-  /** Pago 2 pendiente del joyero: total y nº de piezas (estimado). */
+  /** Pago 2 pendiente del joyero: total, nº de piezas y desglose (estimado). */
   myPendingSaldoMxn: number;
   myPendingCount: number;
+  myPendingFixedMxn: number; // flete + agente (tu parte)
+  myPendingAduanaMxn: number; // IGI + DTA
+  myPendingServiceMxn: number; // servicio de importación NewCo
+  myPendingIvaMxn: number; // IVA acreditable (lo recuperas)
   /** Escalones de llenado (admin) + posición actual y siguiente. */
   tiers: ShipmentTier[];
   currentTier: ShipmentTier | null;
@@ -166,6 +170,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   const myOrders: MyShipmentOrder[] = [];
   let myPendingSaldoMxn = 0;
   let myPendingCount = 0;
+  let myPendingFixedMxn = 0;
+  let myPendingAduanaMxn = 0;
+  let myPendingServiceMxn = 0;
+  let myPendingIvaMxn = 0;
   if (consolidated && jewelerId) {
     for (const o of orders) {
       if (o.jewelerId !== jewelerId) continue; // sólo lo propio
@@ -178,6 +186,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
       if (!o.finalCostConfirmed) {
         myPendingSaldoMxn += saldo;
         myPendingCount += 1;
+        myPendingFixedMxn += line.logiShare + line.agenteShare;
+        myPendingAduanaMxn += line.igiAmt + line.dtaAmt;
+        myPendingServiceMxn += line.marginAmt;
+        myPendingIvaMxn += line.price * IVA_RATE;
       }
       myOrders.push({
         orderId: o.id,
@@ -215,6 +227,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     paidCount: paidOrders.length,
     myPendingSaldoMxn,
     myPendingCount,
+    myPendingFixedMxn,
+    myPendingAduanaMxn,
+    myPendingServiceMxn,
+    myPendingIvaMxn,
     tiers: shipment.tiers,
     currentTier: tierFor(lines.length, shipment.tiers),
     nextTier: nextTierInfo(lines.length, shipment.tiers),

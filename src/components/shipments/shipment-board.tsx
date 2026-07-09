@@ -396,8 +396,8 @@ export function ShipmentBoard() {
         {/* PAGO 2 GLOBAL — una sola acción para toda la logística pendiente. */}
         {board.status === "abierto" && board.myPendingCount > 0 ? (
           <div className="mt-2 rounded-xl border border-[var(--gold)] bg-[var(--warn-bg)] p-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-[260px] flex-1">
                 <div className="label-caps text-[9px] text-[var(--warn-text)]">
                   Pago 2 · logística de tus {board.myPendingCount}{" "}
                   {board.myPendingCount === 1 ? "pieza" : "piezas"} pendientes
@@ -405,12 +405,29 @@ export function ShipmentBoard() {
                 <div className="tabular mt-1 text-[24px] font-bold text-[var(--on-surface)]">
                   {formatMXN(board.myPendingSaldoMxn)}
                 </div>
-                <p className="mt-1 max-w-[440px] text-[10.5px] leading-snug text-[var(--on-surface-variant)]">
-                  Cubre flete, aduana, servicio de importación e IVA (acreditable)
-                  — todo lo del all-in menos la piedra que ya pagaste en el Pago 1.
-                  Estimado con el embarque actual; sólo baja si entran más piedras.
-                  Sin este pago antes del corte, tus piezas rebotan al siguiente
-                  embarque (límite 3).
+
+                {/* De qué se compone — el IVA es la mayor parte y se acredita. */}
+                <div className="mt-2 flex max-w-[420px] flex-col gap-0.5">
+                  <PagoRow label="Flete + agente" value={board.myPendingFixedMxn} />
+                  <PagoRow label="Aduana (IGI + DTA)" value={board.myPendingAduanaMxn} />
+                  <PagoRow
+                    label="Servicio de importación NewCo"
+                    value={board.myPendingServiceMxn}
+                  />
+                  <PagoRow
+                    label="IVA · lo recuperas (acreditable)"
+                    value={board.myPendingIvaMxn}
+                    accredit
+                  />
+                </div>
+                <p className="mt-2 max-w-[420px] text-[10px] leading-snug text-[var(--outline)]">
+                  El costo real es{" "}
+                  {formatMXN(
+                    board.myPendingSaldoMxn - board.myPendingIvaMxn,
+                  )}
+                  ; el IVA se acredita en tu declaración. Estimado con el embarque
+                  actual; sólo baja si entran más piedras. Sin este pago antes del
+                  corte, tus piezas rebotan al siguiente embarque (límite 3).
                 </p>
               </div>
               <button
@@ -552,6 +569,29 @@ function MiniStat({
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+function PagoRow({
+  label,
+  value,
+  accredit,
+}: {
+  label: string;
+  value: number;
+  accredit?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-[11px]">
+      <span className={accredit ? "text-[#3f7a5e]" : "text-[var(--on-surface-variant)]"}>
+        {label}
+      </span>
+      <span
+        className={`tabular ${accredit ? "text-[#3f7a5e]" : "text-[var(--on-surface)]"}`}
+      >
+        {formatMXN(value)}
+      </span>
     </div>
   );
 }
