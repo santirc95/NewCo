@@ -335,19 +335,38 @@ export function ShipmentBoard() {
             <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" />
             <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
             <LedgerRow label="Aduana (IGI + DTA + agente)" value={board.aggregate.composition.customs} marker="var(--c-aduana)" />
-            {/* El servicio NO se muestra como suma global (percepción §7.3):
-                se desglosa POR PIEZA en "Tus piedras" — nada se oculta. */}
-            <div className="flex items-center justify-between gap-4 px-2 py-2.5">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span
-                  aria-hidden
-                  className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
-                  style={{ background: "var(--c-servicio)" }}
-                />
-                <span className="text-[12px] text-[var(--on-surface-variant)]">
-                  Servicio de importación NewCo — desglosado por pieza en
-                  “Tus piedras”
-                </span>
+            {/* Renglón POR PIEDRA (propias con specs, ajenas anónimas). El
+                servicio va por pieza — sin suma global (percepción §7.3). */}
+            <div className="px-2 py-2.5">
+              <div className="label-caps mb-1.5 text-[8.5px] text-[var(--outline)]">
+                Costo por pieza · sin IVA{" "}
+                {board.frozen ? "· congelado" : "· proyección"}
+              </div>
+              <div className="flex flex-col gap-1">
+                {board.perStone.map((r, i) => (
+                  <div
+                    key={r.orderId}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span
+                      className={`tabular min-w-0 truncate text-[12px] ${
+                        r.mine
+                          ? "font-medium text-[var(--warn-text)]"
+                          : "text-[var(--on-surface-variant)]"
+                      }`}
+                    >
+                      {r.mine ? `◆ ${r.label} (tuya)` : `◈ Piedra ${i + 1} · anónima`}
+                    </span>
+                    <span className="flex shrink-0 items-baseline gap-2">
+                      <span className="tabular text-[10.5px] text-[var(--outline)]">
+                        servicio {formatMXN(r.serviceMxn)}
+                      </span>
+                      <span className="tabular text-[12.5px] font-medium text-[var(--on-surface)]">
+                        {formatMXN(r.priceMxn)}
+                      </span>
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
             <LedgerRow label="Precio de venta (sin IVA)" value={board.aggregate.price} />

@@ -42,6 +42,20 @@ export interface MyShipmentOrder {
   fixedShareMxn: number; // flete+agente prorrateado a esta piedra
 }
 
+/**
+ * Renglón por piedra del desglose del embarque. Las ajenas van ANÓNIMAS
+ * (sin specs ni dueño) — sólo su costo por pieza, que es información del
+ * inventario público prorrateada, no un dato comercial del joyero.
+ */
+export interface PerStoneRow {
+  orderId: string;
+  mine: boolean;
+  /** Sólo para piedras propias; ajenas = null (anónimas). */
+  label: string | null;
+  priceMxn: number; // sin IVA
+  serviceMxn: number; // servicio de importación de ESTA piedra
+}
+
 /** Cotización agregada y ANÓNIMA de todo el embarque (mismo computeQuote). */
 export interface ShipmentAggregate {
   allin: number;
@@ -57,6 +71,8 @@ export interface ShipmentAggregate {
  */
 export interface ShipmentBoard {
   aggregate: ShipmentAggregate | null;
+  /** Un renglón por piedra (propias con specs, ajenas anónimas). */
+  perStone: PerStoneRow[];
   shipmentId: string;
   weekLabel: string;
   cutoffAt: string;
@@ -127,6 +143,23 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   const paidSet = new Set(shipment.paidLogisticsOrderIds);
   const paidOrders = orders.filter((o) => paidSet.has(o.id));
 
+  // Renglón por piedra: propias con specs; ajenas anónimas (sin specs/dueño).
+  const perStone: PerStoneRow[] = consolidated
+    ? orders.map((o) => {
+        const l = consolidated.lines.find((x) => x.stoneId === o.id);
+        const mine = o.jewelerId === jewelerId;
+        return {
+          orderId: o.id,
+          mine,
+          label: mine
+            ? `${(o.stoneSnapshot.carat ?? 0).toFixed(2)} ct · ${o.stoneSnapshot.shape ?? ""}`
+            : null,
+          priceMxn: l?.price ?? 0,
+          serviceMxn: l?.marginAmt ?? 0,
+        };
+      })
+    : [];
+
   const myOrders: MyShipmentOrder[] = [];
   if (consolidated && jewelerId) {
     for (const o of orders) {
@@ -172,6 +205,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   }
 
   return {
+    perStone,
     aggregate: consolidated
       ? {
           allin: consolidated.allin,

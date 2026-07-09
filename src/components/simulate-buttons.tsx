@@ -9,12 +9,11 @@ import {
   type SimScenario,
 } from "@/app/simulate-actions";
 
-type Mode = "individual" | "consolidado";
-
 /**
- * Simulación por pieza con DOS escenarios (spec §5): Importación individual
- * (outline, costo real standalone) y Embarque consolidado (sólido, ESTIMADO).
- * Sustituye a la antigua página de cotizador — vive en tarjeta y detalle.
+ * Simulación por pieza — UN solo botón: el modal compara ambos escenarios
+ * (Importación individual = costo real · Embarque consolidado = ESTIMADO con
+ * el escalón vigente del embarque abierto). Sustituye a la antigua página
+ * de cotizador; vive en tarjeta, detalle y favoritos.
  */
 export function SimulateButtons({
   stone,
@@ -24,55 +23,38 @@ export function SimulateButtons({
   compact?: boolean;
 }) {
   const [sim, setSim] = useState<StoneSimulation | null>(null);
-  const [mode, setMode] = useState<Mode | null>(null);
+  const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const open = (m: Mode) => {
-    setMode(m);
-    if (sim) return;
+  const simulate = () => {
+    if (sim) {
+      setOpen(true);
+      return;
+    }
     startTransition(async () => {
       const r = await simulateStoneAction(stone.id);
-      if (r) setSim(r);
-      else setMode(null);
+      if (r) {
+        setSim(r);
+        setOpen(true);
+      }
     });
   };
 
-  const btnBase = `rounded-[8px] py-2 text-center font-medium transition-all disabled:opacity-50 ${
-    compact ? "text-[11.5px] px-2" : "text-[12.5px] px-3"
-  }`;
-
   return (
     <>
-      <div className={`grid grid-cols-2 gap-2 ${compact ? "" : "w-full"}`}>
-        <button
-          type="button"
-          onClick={() => open("individual")}
-          disabled={pending}
-          className={`${btnBase} border border-[var(--hairline)] bg-transparent text-[var(--on-surface)] hover:border-[var(--gold)]`}
-        >
-          Importación individual
-        </button>
-        <button
-          type="button"
-          onClick={() => open("consolidado")}
-          disabled={pending}
-          className={`${btnBase} bg-[var(--gold)] text-white hover:brightness-105`}
-        >
-          Embarque consolidado
-          <span className="label-caps ml-1 text-[7.5px] opacity-80">
-            estimado
-          </span>
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={simulate}
+        disabled={pending}
+        className={`w-full rounded-[8px] border border-[var(--gold)] py-2 text-center font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50 ${
+          compact ? "text-[11.5px] px-2" : "text-[12.5px] px-3"
+        }`}
+      >
+        {pending ? "Simulando…" : "Simular importación"}
+      </button>
 
-      {mode && sim ? (
-        <SimModal
-          stone={stone}
-          sim={sim}
-          mode={mode}
-          onMode={setMode}
-          onClose={() => setMode(null)}
-        />
+      {open && sim ? (
+        <SimModal stone={stone} sim={sim} onClose={() => setOpen(false)} />
       ) : null}
     </>
   );
@@ -95,25 +77,21 @@ function ScenarioCard({
   title,
   tag,
   s,
-  active,
-  onClick,
+  highlight,
   fixedLabel,
 }: {
   title: string;
   tag?: string;
   s: SimScenario;
-  active: boolean;
-  onClick: () => void;
+  highlight?: boolean;
   fixedLabel: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-xl border p-4 text-left transition-all ${
-        active
-          ? "border-[var(--gold)] bg-[var(--warn-bg)] shadow-[0_0_0_1px_var(--gold)]"
-          : "border-[var(--hairline)] bg-[var(--surface-low)] opacity-80 hover:opacity-100"
+    <div
+      className={`rounded-xl border p-4 ${
+        highlight
+          ? "border-[var(--gold)] bg-[var(--warn-bg)]"
+          : "border-[var(--hairline)] bg-[var(--surface-low)]"
       }`}
     >
       <div className="flex items-center gap-2">
@@ -140,21 +118,17 @@ function ScenarioCard({
         <Row label="Servicio NewCo" value={s.serviceMxn} />
         <Row label="IVA (acreditable)" value={s.ivaMxn} />
       </div>
-    </button>
+    </div>
   );
 }
 
 function SimModal({
   stone,
   sim,
-  mode,
-  onMode,
   onClose,
 }: {
   stone: Stone;
   sim: StoneSimulation;
-  mode: Mode;
-  onMode: (m: Mode) => void;
   onClose: () => void;
 }) {
   return (
@@ -178,17 +152,14 @@ function SimModal({
           <ScenarioCard
             title="Importación individual"
             s={sim.individual}
-            active={mode === "individual"}
-            onClick={() => onMode("individual")}
             fixedLabel="Flete + agente (completo)"
           />
           <ScenarioCard
             title="Embarque consolidado"
             tag="estimado"
             s={sim.consolidado}
-            active={mode === "consolidado"}
-            onClick={() => onMode("consolidado")}
-            fixedLabel="Flete + agente (tu parte)"
+            highlight
+            fixedLabel={`Logística (escalón ${sim.tierLabel})`}
           />
         </div>
 
@@ -202,11 +173,11 @@ function SimModal({
         </div>
 
         <p className="mt-2 text-[10.5px] leading-snug text-[var(--outline)]">
-          {sim.typical
-            ? `Proyección con un embarque típico de ${sim.basisCount} piedras.`
-            : `Proyección con el embarque abierto actual (${sim.basisCount} piedras).`}{" "}
-          No es costo real hasta confirmar la orden y cerrar el embarque — el
-          costo definitivo se congela al corte.
+          Estimado con el escalón vigente del embarque abierto: {sim.aboardCount}{" "}
+          {sim.aboardCount === 1 ? "piedra" : "piedras"} contando la tuya →
+          escalón {sim.tierLabel} (~{formatMXN(sim.tierCostMxn)} de logística por
+          pieza). Si entran más piedras, baja. El costo definitivo se congela al
+          corte del embarque.
         </p>
 
         <button
