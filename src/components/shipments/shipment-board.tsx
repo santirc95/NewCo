@@ -56,6 +56,7 @@ function LedgerRow({
   total,
   savings,
   tag,
+  pago1,
 }: {
   label: string;
   value: number;
@@ -63,6 +64,7 @@ function LedgerRow({
   total?: boolean;
   savings?: boolean;
   tag?: string;
+  pago1?: boolean;
 }) {
   return (
     <div
@@ -92,6 +94,11 @@ function LedgerRow({
         {tag ? (
           <span className="label-caps shrink-0 rounded-[2px] bg-[rgba(95,163,130,0.15)] px-1.5 py-0.5 text-[9px] text-[#3f7a5e]">
             {tag}
+          </span>
+        ) : null}
+        {pago1 ? (
+          <span className="label-caps shrink-0 rounded-[2px] border border-[#4f9d79] px-1.5 py-0.5 text-[9px] text-[#4f9d79]">
+            ✓ Pago 1 de 2
           </span>
         ) : null}
       </div>
@@ -332,7 +339,8 @@ export function ShipmentBoard() {
             {board.frozen ? " · congelado" : " · proyección"}
           </div>
           <div className="mt-3 flex flex-col divide-y divide-[var(--hairline)]">
-            <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" />
+            <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" pago1 />
+            <LedgerRow label="IVA de piedras (16%)" value={board.aggregate.ivaStoneMxn} marker="var(--c-stone)" pago1 />
             <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
             <LedgerRow label="Aduana (IGI + DTA + agente)" value={board.aggregate.composition.customs} marker="var(--c-aduana)" />
             {/* Servicio de importación NewCo — desglosado POR PIEZA en lugar
@@ -371,8 +379,11 @@ export function ShipmentBoard() {
                 ))}
               </div>
             </div>
-            <LedgerRow label="Precio de venta (sin IVA)" value={board.aggregate.price} />
-            <LedgerRow label="IVA trasladado (16%)" value={board.aggregate.ivaOut} tag="acreditable" />
+            <LedgerRow
+              label="IVA de los gastos (16%)"
+              value={board.aggregate.ivaExpensesMxn}
+              tag="acreditable"
+            />
             <LedgerRow
               label="Precio de venta (con IVA incluido)"
               value={board.aggregate.allin}

@@ -63,6 +63,8 @@ export interface ShipmentAggregate {
   allin: number;
   price: number;
   ivaOut: number;
+  ivaStoneMxn: number; // IVA de las piedras (cubierto en Pago 1)
+  ivaExpensesMxn: number; // IVA de los gastos de importación (Pago 2)
   landedTotal: number;
   composition: { stone: number; logistics: number; customs: number; service: number };
 }
@@ -222,6 +224,12 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
           allin: consolidated.allin,
           price: consolidated.price,
           ivaOut: consolidated.ivaOut,
+          ivaStoneMxn: consolidated.composition.stone * IVA_RATE,
+          ivaExpensesMxn:
+            (consolidated.composition.logistics +
+              consolidated.composition.customs +
+              consolidated.composition.service) *
+            IVA_RATE,
           landedTotal: consolidated.landedTotal,
           composition: consolidated.composition,
         }
