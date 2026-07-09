@@ -7,6 +7,7 @@ import type { Stone } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 import { useSelection } from "@/components/selection-provider";
 import { addFavoriteAction, removeFavoriteAction } from "@/app/favorites-actions";
+import { SimulateButtons } from "@/components/simulate-buttons";
 
 const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
 const formatUSD = (n: number) => `$${usdFmt.format(Math.round(n))} USD`;
@@ -224,12 +225,7 @@ export function DiamondDetail({
                   ? "Propuesta llena (máx 4)"
                   : "Agregar a propuesta"}
             </button>
-            <Link
-              href={`/cotizador?stones=${stone.id}`}
-              className="flex-1 rounded-[10px] border border-[var(--gold)] py-3 text-center text-[13px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-            >
-              Simular importación
-            </Link>
+
             <button
               type="button"
               onClick={toggleFav}
@@ -239,6 +235,11 @@ export function DiamondDetail({
                 <Heart active={fav} small /> {fav ? "Guardado" : "Favorito"}
               </span>
             </button>
+          </div>
+
+          {/* Dos escenarios de simulación (individual / consolidado estimado) */}
+          <div className="mt-2.5">
+            <SimulateButtons stone={stone} />
           </div>
         </div>
       </div>

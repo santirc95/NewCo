@@ -6,6 +6,15 @@ import type { Shape, Stone } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 import { useSelection } from "@/components/selection-provider";
 import { removeFavoriteAction } from "@/app/favorites-actions";
+import { getMockStone } from "@/lib/inventory";
+import { SimulateButtons } from "@/components/simulate-buttons";
+
+/** Simulación de dos escenarios para un favorito (usa la piedra viva). */
+function FavSim({ stoneId }: { stoneId: string }) {
+  const live = getMockStone(stoneId);
+  if (!live) return null;
+  return <SimulateButtons stone={live} compact />;
+}
 
 const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
 const formatUSD = (n: number) => `$${usdFmt.format(Math.round(n))} USD`;
@@ -136,12 +145,7 @@ export function FavoritesGrid({ items }: { items: FavoriteItem[] }) {
                         ? "Máx 4"
                         : "Agregar a propuesta"}
                   </button>
-                  <Link
-                    href={`/cotizador?stones=${item.stoneId}`}
-                    className="rounded-[8px] border border-[var(--gold)] py-2 text-center text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-                  >
-                    Simular importación
-                  </Link>
+                  <FavSim stoneId={item.stoneId} />
                 </>
               ) : null}
               <button

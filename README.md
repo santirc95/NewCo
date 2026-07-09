@@ -31,7 +31,7 @@ Cuentas demo: `joyero@demo.mx` / `joyero123` · `admin@newco.mx` / `newco123`.
 | Ruta | Qué es |
 |---|---|
 | `/inventario` (+ `/inventario/[id]`) | Grid con filtros en vivo, ♥ favoritos, detalle tipo galería. Precios all-in USD. |
-| `/cotizador` | Destino de "Simular importación/orden" (no está en el nav): `computeQuote` multi-piedra, OpParams editables, IGI con flag, ahorro por consolidar. |
+| Simulación por pieza | Sin página propia: en cada tarjeta/detalle, dos escenarios — **Importación individual** (outline, costo real) y **Embarque consolidado** (sólido, estimado). |
 | `/propuestas` | Gestión: editar set/cliente, link al cliente, señal editable, orden en firme + método. |
 | `/embarques` | El barco semanal **como simulador vivo**: héroe all-in consolidado, piedras anónimas (◈/◆), desglose agregado, ajuste a favor, confirmar costo final. |
 | `/p/[token]` | Cliente final (público): ve y señala. **Sin precio, sin pago, sin login.** |

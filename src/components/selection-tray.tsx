@@ -6,6 +6,7 @@ import { useSelection } from "@/components/selection-provider";
 import { getMockStone } from "@/lib/inventory";
 import { GemTile } from "@/components/gem-icon";
 import { createProposalAction } from "@/app/actions";
+import { proposalUrl } from "@/lib/public-url";
 
 /**
  * Bandeja de selección GLOBAL. La selección vive en el layout raíz y persiste
@@ -28,8 +29,6 @@ export function SelectionTray() {
       setCreated(false);
     }
   };
-
-  const href = `/cotizador?stones=${encodeURIComponent(sel.selected.join(","))}`;
 
   return (
     <>
@@ -67,12 +66,6 @@ export function SelectionTray() {
             >
               Vaciar
             </button>
-            <Link
-              href={href}
-              className="label-caps rounded-[6px] border border-[var(--gold)] px-3.5 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-            >
-              Ver en cotizador ({sel.selected.length})
-            </Link>
             <button
               type="button"
               onClick={() => setGenOpen(true)}
@@ -114,8 +107,7 @@ function GenerateModal({
   const generate = () => {
     startTransition(async () => {
       const p = await createProposalAction(clientName, stoneIds, whatsapp);
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
-      setUrl(`${origin}/p/${p.token}`);
+      setUrl(proposalUrl(p.token)); // dominio neutral (env), nunca marca NewCo
       onCreated();
     });
   };

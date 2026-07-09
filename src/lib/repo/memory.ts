@@ -9,6 +9,7 @@ import type {
   Hold,
   Order,
   OrderStage,
+  Pedido,
   Shipment,
   ShipmentStatus,
   Settings,
@@ -38,6 +39,7 @@ interface DB {
   proposals: Map<string, Proposal>;
   holds: Hold[];
   orders: Order[];
+  pedidos: Pedido[];
   shipments: Shipment[];
   addresses: ShippingAddress[];
   payments: PaymentMethod[];
@@ -109,10 +111,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV42?: DB };
+const g = globalThis as unknown as { __newcoDbV43?: DB };
 const db: DB =
-  g.__newcoDbV42 ??
-  (g.__newcoDbV42 = (() => {
+  g.__newcoDbV43 ??
+  (g.__newcoDbV43 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
@@ -121,6 +123,7 @@ const db: DB =
       proposals: new Map(),
       holds: [],
       orders: [],
+      pedidos: [],
       shipments: seedShipments(settings),
       addresses: [],
       payments: [],
@@ -343,6 +346,21 @@ export const memoryRepo: Repo = {
       createdAt: now(),
     };
     db.orders.push(order);
+    // Agrupa la piedra en el PEDIDO del joyero (se crea si no existe).
+    let ped = db.pedidos.find((x) => x.jewelerId === p.jewelerId);
+    if (!ped) {
+      ped = {
+        id: shortId("PED"),
+        jewelerId: p.jewelerId,
+        orderIds: [],
+        totalUsd: 0,
+        createdAt: now(),
+      };
+      db.pedidos.push(ped);
+    }
+    ped.orderIds.push(order.id);
+    ped.totalUsd += input.totalUsd;
+    order.pedidoId = ped.id;
     p.signaledStoneId = input.stoneId;
     p.status = "confirmada";
     return { proposal: p, order, hold };
@@ -426,6 +444,9 @@ export const memoryRepo: Repo = {
   },
   async getOrder(orderId) {
     return db.orders.find((o) => o.id === orderId);
+  },
+  async getPedido(jewelerId) {
+    return db.pedidos.find((x) => x.jewelerId === jewelerId);
   },
 
   /* ------------------------------- embarques ----------------------------- */

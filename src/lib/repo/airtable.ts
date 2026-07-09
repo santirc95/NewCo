@@ -41,6 +41,7 @@ export const airtableRepo: Repo = {
   payLogistics: todo,
   listOrders: todo,
   getOrder: todo,
+  getPedido: todo,
   listShipments: todo,
   getShipment: todo,
   getOpenShipment: todo,

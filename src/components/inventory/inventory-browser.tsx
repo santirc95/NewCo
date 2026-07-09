@@ -16,6 +16,7 @@ import {
 import type { Stone, MarginBand } from "@/lib/types";
 import { GemTile } from "@/components/gem-icon";
 import { UserMenu, type SessionUser } from "@/components/user-menu";
+import { SimulateButtons } from "@/components/simulate-buttons";
 import { useSelection, MAX_SELECT } from "@/components/selection-provider";
 import { listProposalsAction } from "@/app/actions";
 import {
@@ -35,12 +36,6 @@ function toggle(set: Multi, value: string): Multi {
   if (next.has(value)) next.delete(value);
   else next.add(value);
   return next;
-}
-
-/** Handoff al cotizador: una o varias piedras por id. */
-function simulatorHref(stoneIds: string | string[]): string {
-  const ids = Array.isArray(stoneIds) ? stoneIds.join(",") : stoneIds;
-  return `/cotizador?stones=${encodeURIComponent(ids)}`;
 }
 
 export function InventoryBrowser({
@@ -197,7 +192,7 @@ export function InventoryBrowser({
       </header>
 
       <div className="mx-auto grid max-w-[1280px] grid-cols-1 lg:grid-cols-[248px_1fr]">
-          <aside className="no-print hidden border-r border-[var(--hairline)] px-5 py-6 lg:block">
+          <aside className="no-print hidden border-r border-[var(--hairline)] px-5 py-6 lg:block lg:sticky lg:top-[57px] lg:self-start lg:max-h-[calc(100vh-57px)] lg:overflow-y-auto">
             <FilterSection title="Forma">
               <ChipRow items={SHAPES} set={shape} onToggle={(v) => setShape(toggle(shape, v))} />
             </FilterSection>
@@ -489,12 +484,7 @@ function StoneCard({
         >
           {selected ? "✓ En propuesta" : disabled ? "Máx 4" : "Agregar a propuesta"}
         </button>
-        <Link
-          href={simulatorHref(stone.id)}
-          className="rounded-[8px] border border-[var(--gold)] py-2 text-center text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)]"
-        >
-          Simular importación
-        </Link>
+        <SimulateButtons stone={stone} compact />
       </div>
     </div>
   );

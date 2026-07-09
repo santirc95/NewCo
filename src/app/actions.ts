@@ -129,6 +129,38 @@ export async function listProposalsAction(): Promise<ProposalView[]> {
   return repo.listProposals(jewelerId);
 }
 
+/** Resumen del PEDIDO del joyero (piedras confirmadas agrupadas + total). */
+export interface PedidoSummary {
+  count: number;
+  totalUsd: number;
+  enEmbarque: number;
+  importando: number;
+  entregadas: number;
+}
+
+export async function getMyPedidoAction(): Promise<PedidoSummary | null> {
+  const jewelerId = await currentJewelerId();
+  if (!jewelerId) return null;
+  const pedido = await repo.getPedido(jewelerId);
+  if (!pedido || pedido.orderIds.length === 0) return null;
+  const orders = (
+    await Promise.all(pedido.orderIds.map((id) => repo.getOrder(id)))
+  ).filter((o): o is NonNullable<typeof o> => Boolean(o));
+  const has = (o: (typeof orders)[number], stage: string) =>
+    o.tracking.some((t) => t.stage === stage);
+  return {
+    count: orders.length,
+    totalUsd: pedido.totalUsd,
+    enEmbarque: orders.filter(
+      (o) => has(o, "en_embarque") && !has(o, "en_transito"),
+    ).length,
+    importando: orders.filter(
+      (o) => has(o, "en_transito") && !has(o, "entregado"),
+    ).length,
+    entregadas: orders.filter((o) => has(o, "entregado")).length,
+  };
+}
+
 /** Estado de una propuesta (para el cliente final). */
 export async function getProposalAction(
   token: string,

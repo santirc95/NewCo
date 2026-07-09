@@ -10,6 +10,7 @@ import type {
   Order,
   OrderStage,
   ImportMethod,
+  Pedido,
   Shipment,
   ShipmentStatus,
   Settings,
@@ -116,6 +117,8 @@ export interface Repo {
   payLogistics(orderId: string, paymentRef: string): Promise<Order | undefined>;
   listOrders(jewelerId: string): Promise<Order[]>;
   getOrder(orderId: string): Promise<Order | undefined>;
+  /** El pedido del joyero (agrupa sus órdenes confirmadas; se crea al confirmar). */
+  getPedido(jewelerId: string): Promise<Pedido | undefined>;
 
   // Embarques (el barco semanal)
   listShipments(): Promise<Shipment[]>;

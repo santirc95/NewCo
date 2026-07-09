@@ -246,6 +246,19 @@ export interface OrderStatus {
 export type ImportMethod = "directa" | "consolidada";
 
 /**
+ * Tabla "Pedidos" — el PEDIDO del joyero: agrupa sus piedras confirmadas
+ * (pueden venir de varias propuestas) con su total. Distinto de Proposal,
+ * que es la curaduría a UN cliente final.
+ */
+export interface Pedido {
+  id: string;
+  jewelerId: string;
+  orderIds: string[];
+  totalUsd: number;
+  createdAt: string;
+}
+
+/**
  * Tabla "Ordenes" — UNA piedra CONFIRMADA a importar. Snapshots inmutables +
  * trazabilidad. Alimenta el programa de lealtad (Cap.2).
  */
@@ -253,6 +266,8 @@ export interface Order {
   id: string;
   jewelerId: string;
   proposalId: string;
+  /** Pedido del joyero al que pertenece esta piedra. */
+  pedidoId?: string;
   stoneSnapshot: Partial<Stone>;
   quoteSnapshot: Quote;
   totalUsd: number;

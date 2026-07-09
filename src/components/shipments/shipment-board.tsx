@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
 import { HeroCard } from "@/components/hero-card";
+import { IvaExplainer } from "@/components/iva-explainer";
 import { AnimatedNumber } from "@/components/animated-number";
 import { tierRangeLabel } from "@/lib/tiers";
 import type { ShipmentStatus } from "@/lib/types";
@@ -334,7 +335,21 @@ export function ShipmentBoard() {
             <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" />
             <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
             <LedgerRow label="Aduana (IGI + DTA + agente)" value={board.aggregate.composition.customs} marker="var(--c-aduana)" />
-            <LedgerRow label="Servicio de importación NewCo" value={board.aggregate.composition.service} marker="var(--c-servicio)" />
+            {/* El servicio NO se muestra como suma global (percepción §7.3):
+                se desglosa POR PIEZA en "Tus piedras" — nada se oculta. */}
+            <div className="flex items-center justify-between gap-4 px-2 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span
+                  aria-hidden
+                  className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
+                  style={{ background: "var(--c-servicio)" }}
+                />
+                <span className="text-[12px] text-[var(--on-surface-variant)]">
+                  Servicio de importación NewCo — desglosado por pieza en
+                  “Tus piedras”
+                </span>
+              </div>
+            </div>
             <LedgerRow label="Precio de venta (sin IVA)" value={board.aggregate.price} />
             <LedgerRow label="IVA trasladado (16%)" value={board.aggregate.ivaOut} tag="acreditable" />
             <LedgerRow
@@ -395,7 +410,7 @@ export function ShipmentBoard() {
                     >
                       {pending
                         ? "Procesando…"
-                        : `Confirmar y pagar logística · ${formatMXN(o.saldoMxn)}`}
+                        : `Pagar logística — estimado ${formatMXN(o.saldoMxn)} según el embarque actual`}
                     </button>
                   ) : null}
                   {o.logisticsPaid ? (
@@ -460,6 +475,16 @@ export function ShipmentBoard() {
           </div>
         )}
       </section>
+
+      {board.aggregate ? (
+        <div className="mt-6">
+          <IvaExplainer
+            allin={board.aggregate.allin}
+            ivaOut={board.aggregate.ivaOut}
+            price={board.aggregate.price}
+          />
+        </div>
+      ) : null}
 
       <p className="mt-6 text-center text-[10.5px] text-[var(--outline)]">
         El embarque muestra sólo el agregado del envío — nunca se identifica al

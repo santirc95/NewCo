@@ -12,7 +12,11 @@ import {
   updateProposalAction,
   confirmOrderAction,
   payOrderAction,
+  getMyPedidoAction,
+  type PedidoSummary,
 } from "@/app/actions";
+import { quoteStones, DEFAULT_OP, DEFAULT_BANDS } from "@/lib/quote";
+import { proposalUrl } from "@/lib/public-url";
 import {
   getShipmentLegendAction,
   type ShipmentLegend,
@@ -42,6 +46,8 @@ const FILTERS: { key: Filter; label: string; match: (s: ProposalStatus) => boole
   },
 ];
 
+const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
+
 function fecha(iso: string) {
   return new Date(iso).toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 }
@@ -70,8 +76,12 @@ export function ProposalsManager() {
   const [filter, setFilter] = useState<Filter>("todas");
   const [editing, setEditing] = useState<TrackedProposal | null>(null);
   const [legend, setLegend] = useState<ShipmentLegend | null>(null);
+  const [pedido, setPedido] = useState<PedidoSummary | null>(null);
 
-  const refresh = () => listProposalsAction().then(setProposals).catch(() => {});
+  const refresh = () => {
+    listProposalsAction().then(setProposals).catch(() => {});
+    getMyPedidoAction().then(setPedido).catch(() => {});
+  };
   useEffect(() => {
     refresh();
     getShipmentLegendAction().then(setLegend).catch(() => {});
@@ -94,6 +104,26 @@ export function ProposalsManager() {
         Edita el set, comparte el link, refleja la señal de tu cliente y avanza:
         orden en firme → método (directa o embarque) → pago.
       </p>
+
+      {/* Mi pedido — las piedras confirmadas del joyero, agrupadas */}
+      {pedido ? (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--gold)]/40 bg-[var(--warn-bg)] px-4 py-3">
+          <div>
+            <span className="label-caps text-[9px] text-[var(--warn-text)]">
+              Mi pedido
+            </span>
+            <div className="tabular mt-0.5 text-[13px] text-[var(--on-surface)]">
+              {pedido.count} {pedido.count === 1 ? "piedra confirmada" : "piedras confirmadas"} ·{" "}
+              <b>${usdFmt.format(Math.round(pedido.totalUsd))} USD</b>
+            </div>
+          </div>
+          <div className="label-caps flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] text-[var(--on-surface-variant)]">
+            <span>En embarque {pedido.enEmbarque}</span>
+            <span>Importando {pedido.importando}</span>
+            <span>Entregadas {pedido.entregadas}</span>
+          </div>
+        </div>
+      ) : null}
 
       {/* Filtros */}
       <div className="mt-5 flex flex-wrap gap-1.5">
@@ -170,10 +200,7 @@ function ProposalRow({
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const url =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/p/${proposal.token}`
-      : `/p/${proposal.token}`;
+  const url = proposalUrl(proposal.token); // dominio neutral (env)
 
   const copy = async () => {
     try {
@@ -318,6 +345,12 @@ function ProposalRow({
             Tu cliente puede cambiar de opinión dentro del mismo set; aquí lo
             reflejas tú también.
           </p>
+          {signaled ? (
+            <p className="tabular mt-2 border-t border-[var(--hairline)] pt-2 text-[11.5px] text-[var(--on-surface)]">
+              Tu costo all-in (individual): <b>${usdFmt.format(Math.round(quoteStones([signaled], DEFAULT_OP, null, DEFAULT_BANDS).allin / DEFAULT_OP.fx))} USD</b>
+              <span className="ml-1 text-[10px] text-[var(--outline)]">· consolidado suele bajar — sólo tú lo ves, tu cliente no ve precios</span>
+            </p>
+          ) : null}
         </div>
       ) : signaled ? (
         <div className="mt-4 rounded-lg border border-[var(--hairline)] bg-[var(--surface-low)] p-3">
@@ -349,21 +382,13 @@ function ProposalRow({
             <span className="rounded-[8px] border border-[#3c5a6b] px-3 py-2 text-[12.5px] text-[#5e87a0]">
               Hold vence en <Countdown expiresAt={hold.expiresAt} />
             </span>
-            {signaled ? (
-              <Link
-                href={`/cotizador?stones=${signaled.id}`}
-                className="rounded-[8px] border border-[var(--hairline)] px-3.5 py-2 text-[12.5px] text-[var(--on-surface)] transition-colors hover:border-[var(--gold)]"
-              >
-                Cotizar →
-              </Link>
-            ) : null}
             <button
               type="button"
               onClick={() => doPay("directa")}
               disabled={pending}
               className="rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              {pending ? "Procesando…" : "Realizar importación"}
+              {pending ? "Procesando…" : "Importación individual"}
             </button>
             <button
               type="button"
@@ -371,7 +396,7 @@ function ProposalRow({
               disabled={pending}
               className="rounded-[8px] border border-[var(--gold)] px-3.5 py-2 text-[12.5px] font-medium text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50"
             >
-              {pending ? "Procesando…" : "Agregar a embarque"}
+              {pending ? "Procesando…" : "Embarque consolidado"}
             </button>
             {legend ? (
               <span className="basis-full text-[10.5px] text-[var(--outline)]">
