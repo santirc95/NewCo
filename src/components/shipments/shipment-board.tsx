@@ -409,8 +409,14 @@ export function ShipmentBoard() {
                 {/* De qué se compone — sólo gastos de importación + su IVA
                     (la piedra y su IVA ya se cubrieron en el Pago 1). */}
                 <div className="mt-2 flex max-w-[420px] flex-col gap-0.5">
-                  <PagoRow label="Flete + agente" value={board.myPendingFixedMxn} />
-                  <PagoRow label="Aduana (IGI + DTA)" value={board.myPendingAduanaMxn} />
+                  <PagoRow
+                    label="Flete + seguro internacional"
+                    value={board.myPendingLogisticsMxn}
+                  />
+                  <PagoRow
+                    label="Aduana (IGI + DTA + agente)"
+                    value={board.myPendingAduanaMxn}
+                  />
                   <PagoRow
                     label="Servicio de importación NewCo"
                     value={board.myPendingServiceMxn}
@@ -515,13 +521,16 @@ export function ShipmentBoard() {
                   </div>
                 </div>
 
-                {/* Desglose de la pieza dentro del embarque */}
+                {/* Desglose de la pieza — mismas categorías que arriba */}
                 <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--hairline)] pt-3">
                   <MiniStat
-                    label="Flete+agente (tu parte)"
-                    value={formatMXN(o.fixedShareMxn)}
+                    label="Flete + seguro (tu parte)"
+                    value={formatMXN(o.logisticsMxn)}
                   />
-                  <MiniStat label="Costo aterrizado" value={formatMXN(o.landedMxn)} />
+                  <MiniStat
+                    label="Aduana (IGI+DTA+agente)"
+                    value={formatMXN(o.aduanaMxn)}
+                  />
                   <MiniStat label="Servicio NewCo" value={formatMXN(o.serviceMxn)} />
                 </div>
               </div>

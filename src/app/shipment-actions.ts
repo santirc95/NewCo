@@ -37,11 +37,11 @@ export interface MyShipmentOrder {
   logisticsPaid: boolean;
   reboteCount: number;
   projectedMxn: number; // all-in por pieza (con IVA)
-  // Desglose vivo de la simulación consolidada (sólo para piedras propias):
-  landedMxn: number;
-  serviceMxn: number;
+  // Desglose vivo — MISMAS categorías que el desglose agregado de arriba:
+  logisticsMxn: number; // flete + seguro internacional (tu parte)
+  aduanaMxn: number; // IGI + DTA + agente aduanal (tu parte)
+  serviceMxn: number; // servicio de importación NewCo
   priceMxn: number; // por pieza SIN IVA (price_i)
-  fixedShareMxn: number; // flete+agente prorrateado a esta piedra
 }
 
 /**
@@ -86,8 +86,8 @@ export interface ShipmentBoard {
   /** Pago 2 pendiente del joyero: total, nº de piezas y desglose (estimado). */
   myPendingSaldoMxn: number;
   myPendingCount: number;
-  myPendingFixedMxn: number; // flete + agente (tu parte)
-  myPendingAduanaMxn: number; // IGI + DTA
+  myPendingLogisticsMxn: number; // flete + seguro internacional (tu parte)
+  myPendingAduanaMxn: number; // IGI + DTA + agente aduanal (tu parte)
   myPendingServiceMxn: number; // servicio de importación NewCo
   myPendingIvaMxn: number; // IVA de los gastos (acreditable)
   /** Pago 1 ya pagado (piedra + IVA) de esas piezas pendientes — contexto. */
@@ -174,7 +174,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   const myOrders: MyShipmentOrder[] = [];
   let myPendingSaldoMxn = 0;
   let myPendingCount = 0;
-  let myPendingFixedMxn = 0;
+  let myPendingLogisticsMxn = 0;
   let myPendingAduanaMxn = 0;
   let myPendingServiceMxn = 0;
   let myPendingIvaMxn = 0;
@@ -192,8 +192,8 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
       if (!o.finalCostConfirmed) {
         myPendingSaldoMxn += saldo;
         myPendingCount += 1;
-        myPendingFixedMxn += line.logiShare + line.agenteShare;
-        myPendingAduanaMxn += line.igiAmt + line.dtaAmt;
+        myPendingLogisticsMxn += line.logiShare;
+        myPendingAduanaMxn += line.igiAmt + line.dtaAmt + line.agenteShare;
         myPendingServiceMxn += line.marginAmt;
         myPendingIvaMxn += (line.price - line.stoneMxn) * IVA_RATE;
         myPendingPago1Mxn += pago1;
@@ -207,10 +207,10 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
         logisticsPaid: Boolean(o.finalCostConfirmed),
         reboteCount: o.reboteCount ?? 0,
         projectedMxn: projected,
-        landedMxn: line.landed,
+        logisticsMxn: line.logiShare,
+        aduanaMxn: line.igiAmt + line.dtaAmt + line.agenteShare,
         serviceMxn: line.marginAmt,
         priceMxn: line.price,
-        fixedShareMxn: line.logiShare + line.agenteShare,
       });
     }
   }
@@ -235,7 +235,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     paidCount: paidOrders.length,
     myPendingSaldoMxn,
     myPendingCount,
-    myPendingFixedMxn,
+    myPendingLogisticsMxn,
     myPendingAduanaMxn,
     myPendingServiceMxn,
     myPendingIvaMxn,
