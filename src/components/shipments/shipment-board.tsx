@@ -406,7 +406,8 @@ export function ShipmentBoard() {
                   {formatMXN(board.myPendingSaldoMxn)}
                 </div>
 
-                {/* De qué se compone — el IVA es la mayor parte y se acredita. */}
+                {/* De qué se compone — sólo gastos de importación + su IVA
+                    (la piedra y su IVA ya se cubrieron en el Pago 1). */}
                 <div className="mt-2 flex max-w-[420px] flex-col gap-0.5">
                   <PagoRow label="Flete + agente" value={board.myPendingFixedMxn} />
                   <PagoRow label="Aduana (IGI + DTA)" value={board.myPendingAduanaMxn} />
@@ -415,17 +416,16 @@ export function ShipmentBoard() {
                     value={board.myPendingServiceMxn}
                   />
                   <PagoRow
-                    label="IVA · lo recuperas (acreditable)"
+                    label="IVA de los gastos · lo recuperas (acreditable)"
                     value={board.myPendingIvaMxn}
                     accredit
                   />
                 </div>
-                <p className="mt-2 max-w-[420px] text-[10px] leading-snug text-[var(--outline)]">
-                  El costo real es{" "}
-                  {formatMXN(
-                    board.myPendingSaldoMxn - board.myPendingIvaMxn,
-                  )}
-                  ; el IVA se acredita en tu declaración. Estimado con el embarque
+                <p className="mt-2 max-w-[440px] text-[10px] leading-snug text-[var(--outline)]">
+                  Ya pagaste {formatMXN(board.myPendingPago1Mxn)} en el Pago 1
+                  (piedra + su IVA). El costo real de este Pago 2 es{" "}
+                  {formatMXN(board.myPendingSaldoMxn - board.myPendingIvaMxn)}; el
+                  IVA se acredita en tu declaración. Estimado con el embarque
                   actual; sólo baja si entran más piedras. Sin este pago antes del
                   corte, tus piezas rebotan al siguiente embarque (límite 3).
                 </p>
@@ -467,8 +467,8 @@ export function ShipmentBoard() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="tabular mt-0.5 text-[11px] text-[var(--on-surface-variant)]">
-                    Pago 1 · piedra pagada {formatMXN(o.stoneMxn)}
+                  <div className="tabular mt-0.5 text-[11px] text-[#4f9d79]">
+                    ✓ Pago 1 pagado · piedra + IVA {formatMXN(o.pago1Mxn)}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

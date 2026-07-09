@@ -216,8 +216,8 @@ export function OrderDetail({ order: initial }: { order: Order }) {
                 </p>
               ) : order.importMethod === "consolidada" ? (
                 <p className="mt-1 text-[10.5px] text-[var(--outline)]">
-                  Pago 1 (piedra) cubierto · el saldo logístico se paga ANTES
-                  del corte (Pago 2) — tu escalón queda garantizado al pagar.
+                  Pago 1 (piedra + su IVA) cubierto · los gastos de importación y
+                  su IVA se pagan antes del corte (Pago 2).
                 </p>
               ) : null}
             </div>

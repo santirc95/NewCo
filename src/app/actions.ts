@@ -5,7 +5,7 @@ import { repo, type ProposalView, type ProposalPatch } from "@/lib/repo";
 import { notifier, supplier } from "@/lib/notify";
 import { payments } from "@/lib/payments";
 import { getMockStone } from "@/lib/inventory";
-import { quoteStones, DEFAULT_OP } from "@/lib/quote";
+import { quoteStones, DEFAULT_OP, IVA_RATE } from "@/lib/quote";
 import type { ImportMethod, Proposal } from "@/lib/types";
 
 async function currentJewelerId(): Promise<string | undefined> {
@@ -118,9 +118,9 @@ export async function confirmOrderAction(
 /**
  * PAGO 1 (Opción A): al elegir el método el joyero paga POR ADELANTADO; con el
  * pago confirmado NewCo compra al proveedor (regla de oro) y se suelta el hold.
- * - Consolidada: paga SÓLO el costo de la piedra; la logística se congela y se
- *   paga al corte (Pago 2). La piedra queda resguardada con el proveedor.
- * - Directa: paga piedra + logística en el mismo momento (no hay corte).
+ * - Consolidada: paga la piedra + SU IVA (Pago 1); los gastos de importación y
+ *   su IVA se pagan al corte (Pago 2). La piedra queda resguardada con el proveedor.
+ * - Directa: paga todo el all-in en el mismo momento (no hay corte).
  */
 export async function payOrderAction(
   token: string,
@@ -138,8 +138,8 @@ export async function payOrderAction(
   const line = order.quoteSnapshot.lines[0];
   const amount =
     method === "consolidada"
-      ? (line?.stoneMxn ?? order.quoteSnapshot.allin) // Pago 1: la piedra
-      : order.quoteSnapshot.allin; // directa: piedra + logística
+      ? (line?.stoneMxn ?? 0) * (1 + IVA_RATE) // Pago 1: piedra + su IVA
+      : order.quoteSnapshot.allin; // directa: todo el all-in
   const pay = await payments.charge(amount);
   if (pay.status !== "confirmado") return null;
 

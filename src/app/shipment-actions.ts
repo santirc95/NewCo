@@ -24,8 +24,10 @@ import { tierFor, nextTierInfo } from "@/lib/tiers";
 export interface MyShipmentOrder {
   orderId: string;
   label: string;
-  /** Pago 1 ya realizado: el costo de la piedra. */
+  /** Pago 1 ya realizado: costo de la piedra (sin IVA). */
   stoneMxn: number;
+  /** Pago 1 total ya pagado: piedra + su IVA. */
+  pago1Mxn: number;
   /**
    * Pago 2 GARANTIZADO si pagas ahora: saldo calculado sobre las piedras ya
    * PAGADAS + la tuya (cierre atómico). Sólo puede bajar si pagan más —
@@ -87,7 +89,9 @@ export interface ShipmentBoard {
   myPendingFixedMxn: number; // flete + agente (tu parte)
   myPendingAduanaMxn: number; // IGI + DTA
   myPendingServiceMxn: number; // servicio de importación NewCo
-  myPendingIvaMxn: number; // IVA acreditable (lo recuperas)
+  myPendingIvaMxn: number; // IVA de los gastos (acreditable)
+  /** Pago 1 ya pagado (piedra + IVA) de esas piezas pendientes — contexto. */
+  myPendingPago1Mxn: number;
   /** Escalones de llenado (admin) + posición actual y siguiente. */
   tiers: ShipmentTier[];
   currentTier: ShipmentTier | null;
@@ -174,27 +178,31 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   let myPendingAduanaMxn = 0;
   let myPendingServiceMxn = 0;
   let myPendingIvaMxn = 0;
+  let myPendingPago1Mxn = 0;
   if (consolidated && jewelerId) {
     for (const o of orders) {
       if (o.jewelerId !== jewelerId) continue; // sólo lo propio
       const line = consolidated.lines.find((l) => l.stoneId === o.id);
       if (!line) continue;
       const projected = line.price * (1 + IVA_RATE);
-      // PAGO 2 = todo lo del all-in que NO es la piedra (ya cubierta en Pago 1):
-      // flete+agente + aduana + servicio + IVA. Misma proyección que la tarjeta.
-      const saldo = o.finalCostConfirmed ? 0 : projected - line.stoneMxn;
+      // PAGO 1 (ya pagado) = piedra + su IVA. PAGO 2 = gastos de importación
+      // (flete+agente + aduana + servicio) + IVA de esos gastos.
+      const pago1 = line.stoneMxn * (1 + IVA_RATE);
+      const saldo = o.finalCostConfirmed ? 0 : projected - pago1;
       if (!o.finalCostConfirmed) {
         myPendingSaldoMxn += saldo;
         myPendingCount += 1;
         myPendingFixedMxn += line.logiShare + line.agenteShare;
         myPendingAduanaMxn += line.igiAmt + line.dtaAmt;
         myPendingServiceMxn += line.marginAmt;
-        myPendingIvaMxn += line.price * IVA_RATE;
+        myPendingIvaMxn += (line.price - line.stoneMxn) * IVA_RATE;
+        myPendingPago1Mxn += pago1;
       }
       myOrders.push({
         orderId: o.id,
         label: `${(o.stoneSnapshot.carat ?? 0).toFixed(2)} ct · ${o.stoneSnapshot.shape ?? ""}`,
         stoneMxn: line.stoneMxn,
+        pago1Mxn: pago1,
         saldoMxn: saldo,
         logisticsPaid: Boolean(o.finalCostConfirmed),
         reboteCount: o.reboteCount ?? 0,
@@ -231,6 +239,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     myPendingAduanaMxn,
     myPendingServiceMxn,
     myPendingIvaMxn,
+    myPendingPago1Mxn,
     tiers: shipment.tiers,
     currentTier: tierFor(lines.length, shipment.tiers),
     nextTier: nextTierInfo(lines.length, shipment.tiers),
@@ -276,9 +285,9 @@ export async function getShipmentLegendAction(): Promise<ShipmentLegend | null> 
  */
 /**
  * PAGO 2 GLOBAL — el joyero paga la logística de TODAS sus piezas pendientes
- * en el embarque abierto, en un solo cargo. El saldo por pieza = su all-in
- * proyectado (con IVA) − la piedra ya pagada (Pago 1); coincide con lo que ve
- * en la tarjeta. Sólo con Pago 2 las piezas entran al corte.
+ * en el embarque abierto, en un solo cargo. Saldo por pieza = gastos de
+ * importación + su IVA = all-in − Pago 1(piedra + IVA de la piedra). Sólo con
+ * Pago 2 las piezas entran al corte.
  */
 export async function payAllLogisticsAction(): Promise<boolean> {
   const s = await auth();
@@ -306,10 +315,12 @@ export async function payAllLogisticsAction(): Promise<boolean> {
   );
   if (mine.length === 0) return false;
 
+  // Pago 2 = all-in − Pago 1(piedra + su IVA) = gastos + IVA de gastos.
   let total = 0;
   for (const o of mine) {
     const line = q.lines.find((l) => l.stoneId === o.id);
-    if (line) total += line.price * (1 + IVA_RATE) - line.stoneMxn;
+    if (line)
+      total += (line.price - line.stoneMxn) * (1 + IVA_RATE);
   }
   const pay = await payments.charge(total);
   if (pay.status !== "confirmado") return false;
