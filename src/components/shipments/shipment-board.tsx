@@ -96,23 +96,25 @@ function LedgerRow({
             {tag}
           </span>
         ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
         {pago1 ? (
-          <span className="label-caps shrink-0 rounded-[2px] border border-[#4f9d79] px-1.5 py-0.5 text-[9px] text-[#4f9d79]">
-            ✓ Pago 1 de 2
+          <span className="label-caps rounded-[2px] border border-[#4f9d79] px-1.5 py-0.5 text-[9px] text-[#4f9d79]">
+            ✓ Pagado
           </span>
         ) : null}
+        <span
+          className={`tabular text-right ${
+            total
+              ? "text-[14px] font-bold"
+              : savings
+                ? "text-[13.5px] font-semibold text-[#3f7a5e]"
+                : "text-[13px] text-[var(--on-surface)]"
+          }`}
+        >
+          {formatMXN(value)}
+        </span>
       </div>
-      <span
-        className={`tabular shrink-0 text-right ${
-          total
-            ? "text-[14px] font-bold"
-            : savings
-              ? "text-[13.5px] font-semibold text-[#3f7a5e]"
-              : "text-[13px] text-[var(--on-surface)]"
-        }`}
-      >
-        {formatMXN(value)}
-      </span>
     </div>
   );
 }
