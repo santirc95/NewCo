@@ -60,6 +60,39 @@ export async function updateProposalAction(
 }
 
 /**
+ * ORDEN DIRECTA: el joyero pone piedras en firme SIN cliente final (para
+ * stock/sí mismo). Crea una Order confirmada por piedra (agrupadas en su
+ * Pedido), lista para elegir método (embarque / individual) en Propuestas.
+ */
+export async function confirmDirectOrderAction(
+  stoneIds: string[],
+): Promise<number> {
+  const jewelerId = (await currentJewelerId()) ?? "jwl-vecchia";
+  const bands = await repo.listBands();
+  let created = 0;
+  for (const stoneId of stoneIds.slice(0, 4)) {
+    const stone = getMockStone(stoneId);
+    if (!stone) continue;
+    const proposal = await repo.createProposal({
+      jewelerId,
+      clientName: "",
+      stoneIds: [stoneId],
+      direct: true,
+    });
+    const quote = quoteStones([stone], DEFAULT_OP, null, bands);
+    await repo.confirmOrder({
+      token: proposal.token,
+      stoneId,
+      stoneSnapshot: { ...stone },
+      quoteSnapshot: quote,
+      totalUsd: stone.supplierPriceUsd,
+    });
+    created++;
+  }
+  return created;
+}
+
+/**
  * El joyero pone la ORDEN EN FIRME: crea la Order (etapa "confirmada") con
  * snapshots y deja la piedra en hold. Elegir método y pagar es el paso
  * siguiente (Opción A).

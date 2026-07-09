@@ -207,6 +207,8 @@ export interface Proposal {
   signaledStoneId?: string;
   /** WhatsApp del joyero para el aviso click-to-chat del cliente. */
   jewelerWhatsapp?: string;
+  /** Orden directa del joyero (para stock/sí mismo) — sin cliente final. */
+  direct?: boolean;
   createdAt: string;
   status: ProposalStatus;
 }

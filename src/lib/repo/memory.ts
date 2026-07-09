@@ -261,6 +261,7 @@ export const memoryRepo: Repo = {
       clientName: input.clientName,
       stoneIds: input.stoneIds.slice(0, 4),
       jewelerWhatsapp: input.jewelerWhatsapp || undefined,
+      direct: input.direct || undefined,
       createdAt: now(),
       status: "enviada",
     };

@@ -32,6 +32,8 @@ export interface CreateProposalInput {
   clientName: string;
   stoneIds: string[];
   jewelerWhatsapp?: string;
+  /** Orden directa (para stock/sí mismo) — sin cliente final. */
+  direct?: boolean;
 }
 
 export interface ProposalPatch {

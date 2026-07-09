@@ -258,8 +258,17 @@ function ProposalRow({
             })}
           </div>
           <div>
-            <div className="text-[14px] font-semibold text-[var(--on-surface)]">
-              {proposal.clientName || "Cliente"}
+            <div className="flex items-center gap-2">
+              <span className="text-[14px] font-semibold text-[var(--on-surface)]">
+                {proposal.direct
+                  ? "Orden directa"
+                  : proposal.clientName || "Cliente"}
+              </span>
+              {proposal.direct ? (
+                <span className="label-caps rounded-[3px] border border-[var(--hairline)] px-1.5 py-0.5 text-[8px] text-[var(--on-surface-variant)]">
+                  para stock · sin cliente
+                </span>
+              ) : null}
             </div>
             <div className="tabular text-[11px] text-[var(--on-surface-variant)]">
               {fecha(proposal.createdAt)} · {proposal.stoneIds.length}{" "}
@@ -281,7 +290,8 @@ function ProposalRow({
         </div>
       </div>
 
-      {/* Link al cliente */}
+      {/* Link al cliente (no aplica a órdenes directas — sin cliente) */}
+      {!proposal.direct ? (
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="tabular max-w-[340px] truncate rounded-[6px] border border-[var(--hairline)] bg-[var(--surface-low)] px-2.5 py-1.5 text-[11px] text-[var(--on-surface-variant)]">
           {url}
@@ -311,6 +321,7 @@ function ProposalRow({
           </button>
         ) : null}
       </div>
+      ) : null}
 
       {/* Señal del cliente (editable dentro del mismo set) */}
       {editable ? (

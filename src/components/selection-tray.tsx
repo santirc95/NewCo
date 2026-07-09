@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSelection } from "@/components/selection-provider";
 import { getMockStone } from "@/lib/inventory";
 import { GemTile } from "@/components/gem-icon";
-import { createProposalAction } from "@/app/actions";
+import { createProposalAction, confirmDirectOrderAction } from "@/app/actions";
 import { proposalUrl } from "@/lib/public-url";
 
 /**
@@ -16,8 +17,10 @@ import { proposalUrl } from "@/lib/public-url";
  */
 export function SelectionTray() {
   const sel = useSelection();
+  const router = useRouter();
   const [genOpen, setGenOpen] = useState(false);
   const [created, setCreated] = useState(false);
+  const [ordering, startOrder] = useTransition();
   const hasSel = sel.selected.length > 0;
 
   // Vaciar sólo al cerrar el modal (y sólo si se creó): así el modal no se
@@ -28,6 +31,17 @@ export function SelectionTray() {
       sel.clear();
       setCreated(false);
     }
+  };
+
+  // Orden directa (sin cliente): pone las piezas en firme y lleva a Propuestas
+  // para elegir método (embarque / individual).
+  const orderDirect = () => {
+    const ids = sel.selected;
+    startOrder(async () => {
+      await confirmDirectOrderAction(ids);
+      sel.clear();
+      router.push("/propuestas");
+    });
   };
 
   return (
@@ -65,6 +79,15 @@ export function SelectionTray() {
               className="hidden text-[11.5px] text-[var(--outline)] hover:text-[var(--on-surface-variant)] sm:block"
             >
               Vaciar
+            </button>
+            <button
+              type="button"
+              onClick={orderDirect}
+              disabled={ordering}
+              title="Pon las piezas en firme sin cliente y elige el método en Propuestas"
+              className="label-caps inline-flex items-center gap-2 rounded-[6px] border border-[var(--gold)] px-4 py-2.5 text-[11px] text-[var(--warn-text)] transition-colors hover:bg-[var(--warn-bg)] disabled:opacity-50"
+            >
+              {ordering ? "Ordenando…" : "Poner orden en firme"}
             </button>
             <button
               type="button"
