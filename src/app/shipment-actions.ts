@@ -81,6 +81,9 @@ export interface ShipmentBoard {
   count: number;
   /** Piedras con logística PAGADA (las únicas que entran al cierre atómico). */
   paidCount: number;
+  /** Pago 2 pendiente del joyero: total y nº de piezas (estimado). */
+  myPendingSaldoMxn: number;
+  myPendingCount: number;
   /** Escalones de llenado (admin) + posición actual y siguiente. */
   tiers: ShipmentTier[];
   currentTier: ShipmentTier | null;
@@ -161,32 +164,20 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     : [];
 
   const myOrders: MyShipmentOrder[] = [];
+  let myPendingSaldoMxn = 0;
+  let myPendingCount = 0;
   if (consolidated && jewelerId) {
     for (const o of orders) {
       if (o.jewelerId !== jewelerId) continue; // sólo lo propio
       const line = consolidated.lines.find((l) => l.stoneId === o.id);
       if (!line) continue;
       const projected = line.price * (1 + IVA_RATE);
-      // Pago 2 garantizado: quote sobre pagadas + esta (peor caso; sólo baja).
-      let saldo = 0;
+      // PAGO 2 = todo lo del all-in que NO es la piedra (ya cubierta en Pago 1):
+      // flete+agente + aduana + servicio + IVA. Misma proyección que la tarjeta.
+      const saldo = o.finalCostConfirmed ? 0 : projected - line.stoneMxn;
       if (!o.finalCostConfirmed) {
-        const basis = [...paidOrders.filter((x) => x.id !== o.id), o];
-        const basisLines: QuoteLineInput[] = basis.map((x) => {
-          const usd = x.stoneSnapshot.supplierPriceUsd ?? x.totalUsd;
-          return {
-            stoneId: x.id,
-            supplierPriceUsd: usd,
-            marginPct: resolveMargin(
-              { supplierPriceUsd: usd } as Stone,
-              null,
-              bands,
-            ),
-          };
-        });
-        const q = computeQuote(basisLines, op);
-        const myLine = q.lines.find((l) => l.stoneId === o.id);
-        if (myLine)
-          saldo = myLine.price * (1 + IVA_RATE) - myLine.stoneMxn;
+        myPendingSaldoMxn += saldo;
+        myPendingCount += 1;
       }
       myOrders.push({
         orderId: o.id,
@@ -222,6 +213,8 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     settings,
     count: lines.length,
     paidCount: paidOrders.length,
+    myPendingSaldoMxn,
+    myPendingCount,
     tiers: shipment.tiers,
     currentTier: tierFor(lines.length, shipment.tiers),
     nextTier: nextTierInfo(lines.length, shipment.tiers),
@@ -265,20 +258,21 @@ export async function getShipmentLegendAction(): Promise<ShipmentLegend | null> 
  * "escalón más caro al cierre" es imposible por construcción → cualquier
  * diferencia es ajuste a favor). Sólo con Pago 2 la piedra entra al corte.
  */
-export async function payLogisticsAction(orderId: string): Promise<boolean> {
+/**
+ * PAGO 2 GLOBAL — el joyero paga la logística de TODAS sus piezas pendientes
+ * en el embarque abierto, en un solo cargo. El saldo por pieza = su all-in
+ * proyectado (con IVA) − la piedra ya pagada (Pago 1); coincide con lo que ve
+ * en la tarjeta. Sólo con Pago 2 las piezas entran al corte.
+ */
+export async function payAllLogisticsAction(): Promise<boolean> {
   const s = await auth();
   const jewelerId = s?.user?.jewelerId;
   if (!jewelerId) return false;
-  const o = await repo.getOrder(orderId);
-  if (!o || o.jewelerId !== jewelerId || o.finalCostConfirmed) return false;
-  const shipment = o.shipmentId ? await repo.getShipment(o.shipmentId) : null;
-  if (!shipment || shipment.status !== "abierto") return false; // pre-corte
+  const shipment = await repo.getOpenShipment();
+  if (!shipment || shipment.status !== "abierto") return false;
 
-  // Base atómica: piedras con logística YA pagada + la propia.
-  const paidSet = new Set(shipment.paidLogisticsOrderIds);
-  const basisIds = [...shipment.orderIds.filter((x) => paidSet.has(x)), o.id];
   const orders = (
-    await Promise.all([...new Set(basisIds)].map((id) => repo.getOrder(id)))
+    await Promise.all(shipment.orderIds.map((id) => repo.getOrder(id)))
   ).filter((x): x is Order => Boolean(x));
   const bands = await repo.listBands();
   const lines: QuoteLineInput[] = orders.map((x) => {
@@ -290,12 +284,19 @@ export async function payLogisticsAction(orderId: string): Promise<boolean> {
     };
   });
   const q = computeQuote(lines, DEFAULT_OP);
-  const line = q.lines.find((l) => l.stoneId === o.id);
-  if (!line) return false;
-  const saldo = line.price * (1 + IVA_RATE) - line.stoneMxn;
 
-  const pay = await payments.charge(saldo);
+  const mine = orders.filter(
+    (o) => o.jewelerId === jewelerId && !o.finalCostConfirmed,
+  );
+  if (mine.length === 0) return false;
+
+  let total = 0;
+  for (const o of mine) {
+    const line = q.lines.find((l) => l.stoneId === o.id);
+    if (line) total += line.price * (1 + IVA_RATE) - line.stoneMxn;
+  }
+  const pay = await payments.charge(total);
   if (pay.status !== "confirmado") return false;
-  await repo.payLogistics(orderId, pay.ref);
+  for (const o of mine) await repo.payLogistics(o.id, pay.ref);
   return true;
 }

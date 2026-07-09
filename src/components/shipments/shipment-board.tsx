@@ -9,7 +9,7 @@ import { tierRangeLabel } from "@/lib/tiers";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
-  payLogisticsAction,
+  payAllLogisticsAction,
   type ShipmentBoard as Board,
 } from "@/app/shipment-actions";
 
@@ -146,9 +146,9 @@ export function ShipmentBoard() {
   }
 
   const st = SHIP_STATUS[board.status];
-  const payLogistics = (orderId: string) => {
+  const payAllLogistics = () => {
     startTransition(async () => {
-      await payLogisticsAction(orderId);
+      await payAllLogisticsAction();
       refresh();
     });
   };
@@ -392,6 +392,39 @@ export function ShipmentBoard() {
         <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
           Tus piedras en este embarque
         </h2>
+
+        {/* PAGO 2 GLOBAL — una sola acción para toda la logística pendiente. */}
+        {board.status === "abierto" && board.myPendingCount > 0 ? (
+          <div className="mt-2 rounded-xl border border-[var(--gold)] bg-[var(--warn-bg)] p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <div className="label-caps text-[9px] text-[var(--warn-text)]">
+                  Pago 2 · logística de tus {board.myPendingCount}{" "}
+                  {board.myPendingCount === 1 ? "pieza" : "piezas"} pendientes
+                </div>
+                <div className="tabular mt-1 text-[24px] font-bold text-[var(--on-surface)]">
+                  {formatMXN(board.myPendingSaldoMxn)}
+                </div>
+                <p className="mt-1 max-w-[440px] text-[10.5px] leading-snug text-[var(--on-surface-variant)]">
+                  Cubre flete, aduana, servicio de importación e IVA (acreditable)
+                  — todo lo del all-in menos la piedra que ya pagaste en el Pago 1.
+                  Estimado con el embarque actual; sólo baja si entran más piedras.
+                  Sin este pago antes del corte, tus piezas rebotan al siguiente
+                  embarque (límite 3).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={payAllLogistics}
+                disabled={pending}
+                className="rounded-[10px] bg-[var(--primary)] px-5 py-3 text-[13px] font-medium text-[var(--on-primary)] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {pending ? "Procesando…" : "Pagar logística de mis piezas"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {board.myOrders.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-[var(--on-surface-variant)]">
             Aún no tienes piedras aquí. Confirma una orden en{" "}
@@ -422,23 +455,15 @@ export function ShipmentBoard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {!o.logisticsPaid && board.status === "abierto" ? (
-                    <button
-                      type="button"
-                      onClick={() => payLogistics(o.orderId)}
-                      disabled={pending}
-                      className="tabular rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-[12px] font-medium text-[var(--on-primary)] hover:opacity-90 disabled:opacity-50"
-                    >
-                      {pending
-                        ? "Procesando…"
-                        : `Pagar logística — estimado ${formatMXN(o.saldoMxn)} según el embarque actual`}
-                    </button>
-                  ) : null}
                   {o.logisticsPaid ? (
                     <span className="text-[11.5px] text-[#4f9d79]">
                       ✓ Logística pagada — entra al corte
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="tabular label-caps rounded-[4px] border border-[var(--hairline)] px-2 py-1 text-[9px] text-[var(--on-surface-variant)]">
+                      Pago 2 pendiente · {formatMXN(o.saldoMxn)}
+                    </span>
+                  )}
                 </div>
                 </div>
 
@@ -472,15 +497,6 @@ export function ShipmentBoard() {
                     </span>
                   </div>
                 </div>
-
-                {!o.logisticsPaid && board.status === "abierto" ? (
-                  <p className="mt-2 rounded-[6px] bg-[var(--warn-bg)] px-2.5 py-1.5 text-[10.5px] leading-snug text-[var(--warn-text)]">
-                    Tu escalón queda garantizado al pagar — sólo puede bajar si
-                    entran más piedras (ajuste a favor al cierre). Si no pagas
-                    antes del corte, tu piedra rebota al siguiente embarque
-                    (límite: 3).
-                  </p>
-                ) : null}
 
                 {/* Desglose de la pieza dentro del embarque */}
                 <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[var(--hairline)] pt-3">
