@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSelection } from "@/components/selection-provider";
 import { getMockStone } from "@/lib/inventory";
 import { GemTile } from "@/components/gem-icon";
@@ -18,11 +18,20 @@ import { proposalUrl } from "@/lib/public-url";
 export function SelectionTray() {
   const sel = useSelection();
   const router = useRouter();
+  const pathname = usePathname();
   const [genOpen, setGenOpen] = useState(false);
   const [confirmOrder, setConfirmOrder] = useState(false);
   const [created, setCreated] = useState(false);
   const [ordering, startOrder] = useTransition();
-  const hasSel = sel.selected.length > 0;
+
+  // La SELECCIÓN persiste entre páginas (contexto en el layout raíz), pero la
+  // tira sólo se muestra donde estás eligiendo piedras: inventario, detalle y
+  // favoritos. En embarques/portal/admin sería ruido (y tapa contenido).
+  const onSelectSurface =
+    pathname === "/inventario" ||
+    pathname.startsWith("/inventario/") ||
+    pathname === "/favoritos";
+  const hasSel = sel.selected.length > 0 && onSelectSurface;
 
   // Vaciar sólo al cerrar el modal (y sólo si se creó): así el modal no se
   // desmonta al generar el link.
