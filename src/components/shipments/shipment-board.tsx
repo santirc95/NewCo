@@ -204,14 +204,20 @@ export function ShipmentBoard() {
       </div>
 
       {/* ===== BLOQUE 1: el embarque completo (público, anónimo) ===== */}
-      <div className="mt-8 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--hairline)] pt-6">
-        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
-          El embarque de esta semana
-        </h2>
-        <span className="label-caps text-[9px] text-[var(--outline)]">
-          · agregado anónimo ·{" "}
-          {board.frozen ? "congelado al cierre" : "proyección (se congela al cierre)"}
-        </span>
+      <div className="mt-8 border-t border-[var(--hairline)] pt-6">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+            El embarque de esta semana
+          </h2>
+          <span className="label-caps text-[9px] text-[var(--outline)]">
+            · el barco completo (anónimo)
+          </span>
+        </div>
+        <p className="mt-1 text-[11px] text-[var(--on-surface-variant)]">
+          Referencia del envío de todos los joyeros —{" "}
+          <b className="text-[var(--on-surface)]">no es tu cobro</b>. Tú pagas
+          sólo tus piezas, abajo en “Lo que pagas tú”.
+        </p>
       </div>
 
       {/* El embarque ES el simulador: héroe con el quote consolidado en vivo */}
@@ -405,14 +411,16 @@ export function ShipmentBoard() {
         </div>
       ) : null}
 
-      {/* ===== BLOQUE 2: lo tuyo (tus pagos y piezas) ===== */}
-      <div className="mt-10 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--hairline)] pt-6">
-        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
-          Lo tuyo
-        </h2>
-        <span className="label-caps text-[9px] text-[var(--outline)]">
-          · tus pagos y piezas en este embarque
-        </span>
+      {/* ===== BLOQUE 2: lo que paga el joyero (sus piezas) ===== */}
+      <div className="mt-10 border-t border-[var(--hairline)] pt-6">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h2 className="label-caps text-[10.5px] font-semibold text-[var(--warn-text)]">
+            Lo que pagas tú
+          </h2>
+          <span className="label-caps text-[9px] text-[var(--outline)]">
+            · sólo tus piezas de este embarque
+          </span>
+        </div>
       </div>
 
       {/* Sección: Pago de logística (Pago 2) — una sola acción global. */}
