@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
-import { HeroCard } from "@/components/hero-card";
 import { IvaExplainer } from "@/components/iva-explainer";
 import { AnimatedNumber } from "@/components/animated-number";
 import type { ShipmentStatus } from "@/lib/types";
@@ -11,9 +10,6 @@ import {
   payAllLogisticsAction,
   type ShipmentBoard as Board,
 } from "@/app/shipment-actions";
-
-const usdFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
-const formatUSD = (n: number) => `$${usdFmt.format(Math.round(n))} USD`;
 
 const SHIP_STATUS: Record<ShipmentStatus, { label: string; cls: string }> = {
   abierto: { label: "Abierto", cls: "border-[#3f7a5e] text-[#4f9d79] bg-[rgba(79,157,121,0.08)]" },
@@ -46,76 +42,6 @@ function fechaCorta(iso: string) {
     day: "2-digit",
     month: "long",
   });
-}
-
-function LedgerRow({
-  label,
-  value,
-  marker,
-  total,
-  savings,
-  tag,
-  pago1,
-}: {
-  label: string;
-  value: number;
-  marker?: string;
-  total?: boolean;
-  savings?: boolean;
-  tag?: string;
-  pago1?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 px-2 py-2.5 ${
-        total ? "bg-[var(--primary)] text-[var(--on-primary)] rounded-[6px] px-3" : ""
-      }`}
-    >
-      <div className="flex min-w-0 items-center gap-2.5">
-        {marker ? (
-          <span
-            aria-hidden
-            className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
-            style={{ background: marker }}
-          />
-        ) : null}
-        <span
-          className={`truncate ${
-            total
-              ? "text-[13.5px] font-semibold"
-              : savings
-                ? "text-[13px] font-medium text-[#3f7a5e]"
-                : "text-[13px] text-[var(--on-surface)]"
-          }`}
-        >
-          {label}
-        </span>
-        {tag ? (
-          <span className="label-caps shrink-0 rounded-[2px] bg-[rgba(95,163,130,0.15)] px-1.5 py-0.5 text-[9px] text-[#3f7a5e]">
-            {tag}
-          </span>
-        ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {pago1 ? (
-          <span className="label-caps rounded-[2px] border border-[#4f9d79] px-1.5 py-0.5 text-[9px] text-[#4f9d79]">
-            ✓ Pagado
-          </span>
-        ) : null}
-        <span
-          className={`tabular text-right ${
-            total
-              ? "text-[14px] font-bold"
-              : savings
-                ? "text-[13.5px] font-semibold text-[#3f7a5e]"
-                : "text-[13px] text-[var(--on-surface)]"
-          }`}
-        >
-          {formatMXN(value)}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 export function ShipmentBoard() {
@@ -154,6 +80,9 @@ export function ShipmentBoard() {
   }
 
   const st = SHIP_STATUS[board.status];
+  // Totales del JOYERO (sólo sus piezas) — el joyero no ve el agregado del barco.
+  const myAllinMxn = board.myOrders.reduce((s, o) => s + o.projectedMxn, 0);
+  const myPriceMxn = board.myOrders.reduce((s, o) => s + o.priceMxn, 0);
   const payAllLogistics = () => {
     startTransition(async () => {
       await payAllLogisticsAction();
@@ -202,69 +131,23 @@ export function ShipmentBoard() {
         </div>
       </div>
 
-      {/* ===== BLOQUE 1: el embarque completo (público, anónimo) ===== */}
-      <div className="mt-8 border-t border-[var(--hairline)] pt-6">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
-            El embarque de esta semana
-          </h2>
-          <span className="label-caps text-[9px] text-[var(--outline)]">
-            · el barco completo (anónimo)
-          </span>
-        </div>
-        <p className="mt-1 text-[11px] text-[var(--on-surface-variant)]">
-          Referencia del envío de todos los joyeros —{" "}
-          <b className="text-[var(--on-surface)]">no es tu cobro</b>. Tú pagas
-          sólo tus piezas, abajo en “Lo que pagas tú”.
-        </p>
-      </div>
-
-      {/* El embarque ES el simulador: héroe con el quote consolidado en vivo */}
-      {board.aggregate ? (
-        <div className="mt-4">
-          <HeroCard
-            allin={board.aggregate.allin}
-            price={board.aggregate.price}
-            composition={board.aggregate.composition}
-            servicioLabel="Servicio de importación NewCo"
-            label={
-              board.frozen
-                ? "All-in del embarque · costos congelados"
-                : "All-in del embarque · proyección en vivo"
-            }
-            subline={
-              <>
-                <span className="tabular text-white/90">
-                  {board.count} {board.count === 1 ? "piedra" : "piedras"}
-                </span>
-                <span aria-hidden className="text-white/35">·</span>
-                <span className="tabular text-white/90">
-                  {formatUSD(board.totalUsd)}
-                </span>
-                <span aria-hidden className="text-white/35">·</span>
-                <span>
-                  ahorro vs importar por separado{" "}
-                  <span className="tabular text-[var(--h-servicio)]">
-                    {formatMXN(board.totalSavingsMxn)}
-                  </span>
-                </span>
-              </>
-            }
-          />
-        </div>
-      ) : null}
-
-      {/* El barco — piedras anónimas (las tuyas en oro) */}
-      <div className="mt-6 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
-        <div className="flex items-center justify-between gap-3">
-          <span className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-            El barco de esta semana
-          </span>
+      {/* ===== Sección: El barco de esta semana (contexto, anónimo) ===== */}
+      <section className="mt-8 border-t border-[var(--hairline)] pt-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+              El barco de esta semana
+            </h2>
+            <span className="label-caps text-[9px] text-[var(--outline)]">
+              · las piezas de otros joyeros van anónimas
+            </span>
+          </div>
           <span className="tabular text-[11px] text-[var(--outline)]">
             {board.count} {board.count === 1 ? "piedra" : "piedras"} a bordo ·{" "}
             {board.paidCount} con logística pagada
           </span>
         </div>
+        <div className="mt-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
         {board.count === 0 ? (
           <p className="mt-4 text-center text-[12.5px] text-[var(--on-surface-variant)]">
             El barco está vacío — la primera piedra paga el costo fijo completo;
@@ -330,71 +213,42 @@ export function ShipmentBoard() {
             </p>
           ) : null}
         </div>
-      </div>
+        </div>
+      </section>
 
-      {/* Desglose del embarque — mismo lenguaje que el cotizador (agregado) */}
-      {board.aggregate ? (
-        <div className="mt-4 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
-          <div className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-            Desglose del costo
-          </div>
-          <div className="mt-3 flex flex-col divide-y divide-[var(--hairline)]">
-            <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" pago1 />
-            <LedgerRow label="IVA de piedras (16%)" value={board.aggregate.ivaStoneMxn} marker="var(--c-stone)" pago1 />
-            <LedgerRow label="IGI + DTA (pedimento · sin IVA)" value={board.aggregate.pedimentoMxn} marker="var(--c-aduana)" pago1 />
-            <LedgerRow label="Flete + seguro internacional" value={board.aggregate.composition.logistics} marker="var(--c-logi)" />
-            <LedgerRow label="Agente aduanal" value={board.aggregate.agenteMxn} marker="var(--c-aduana)" />
-            {/* Servicio de importación NewCo — desglosado POR PIEZA en lugar
-                de una suma global (§7.3). Cada porción es un COMPONENTE que
-                suma al precio de venta (no el precio total de la pieza). */}
-            <div className="px-2 py-2.5">
-              <div className="flex items-center gap-2.5">
-                <span
-                  aria-hidden
-                  className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
-                  style={{ background: "var(--c-servicio)" }}
-                />
-                <span className="text-[13px] text-[var(--on-surface)]">
-                  Servicio de importación NewCo · por pieza
+      {/* Héroe del JOYERO: lo que paga por SUS piedras (no el agregado del barco) */}
+      {board.myOrders.length > 0 ? (
+        <div
+          className="hero-card grain relative mt-8 overflow-hidden rounded-xl"
+          style={{ boxShadow: "var(--shadow-hero)" }}
+        >
+          <div className="gradient-mesh absolute inset-0 opacity-95" aria-hidden />
+          <div className="relative p-7 text-white">
+            <span className="label-caps text-[11px] text-[var(--h-servicio)]/90">
+              {board.frozen
+                ? "Lo que pagas por tus piedras · costo final"
+                : "Lo que pagas por tus piedras · proyección en vivo"}
+            </span>
+            <AnimatedNumber
+              value={myAllinMxn}
+              format={formatMXN}
+              className="tabular mt-2 block text-[clamp(2rem,5vw,2.8rem)] font-bold leading-none tracking-[-0.02em] text-white"
+            />
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[13px] text-white/65">
+              <span className="tabular text-white/90">
+                {board.myOrders.length}{" "}
+                {board.myOrders.length === 1 ? "pieza" : "piezas"}
+              </span>
+              <span aria-hidden className="text-white/35">·</span>
+              <span>
+                sin IVA{" "}
+                <span className="tabular text-white/90">
+                  {formatMXN(myPriceMxn)}
                 </span>
-              </div>
-              <div className="mt-1.5 flex flex-col gap-1 pl-5">
-                {board.perStone.map((r, i) => (
-                  <div
-                    key={r.orderId}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <span
-                      className={`tabular min-w-0 truncate text-[11.5px] ${
-                        r.mine
-                          ? "text-[var(--warn-text)]"
-                          : "text-[var(--on-surface-variant)]"
-                      }`}
-                    >
-                      {r.mine ? `◆ ${r.label} (tuya)` : `◈ Piedra ${i + 1} · anónima`}
-                    </span>
-                    <span className="tabular shrink-0 text-[12px] text-[var(--on-surface)]">
-                      {formatMXN(r.serviceMxn)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              </span>
+              <span aria-hidden className="text-white/35">·</span>
+              <span>el IVA se acredita</span>
             </div>
-            <LedgerRow
-              label="IVA de los gastos (16%)"
-              value={board.aggregate.ivaExpensesMxn}
-              tag="acreditable"
-            />
-            <LedgerRow
-              label="Precio de venta (con IVA incluido)"
-              value={board.aggregate.allin}
-              total
-            />
-            <LedgerRow
-              label="Ahorro vs importar por separado"
-              value={board.totalSavingsMxn}
-              savings
-            />
           </div>
         </div>
       ) : null}
@@ -555,19 +409,19 @@ export function ShipmentBoard() {
         )}
       </section>
 
-      {board.aggregate ? (
+      {board.myOrders.length > 0 ? (
         <div className="mt-6">
           <IvaExplainer
-            allin={board.aggregate.allin}
-            ivaOut={board.aggregate.ivaOut}
-            price={board.aggregate.price}
+            allin={myAllinMxn}
+            ivaOut={myAllinMxn - myPriceMxn}
+            price={myPriceMxn}
           />
         </div>
       ) : null}
 
       <p className="mt-6 text-center text-[10.5px] text-[var(--outline)]">
-        El embarque muestra sólo el agregado del envío — nunca se identifica al
-        joyero dueño de cada piedra ni sus datos comerciales.
+        Sólo ves lo que pagas por tus piezas. Las piedras de otros joyeros van
+        anónimas — nunca se identifica al dueño ni sus datos comerciales.
       </p>
 
       {inviteOpen ? <InviteModal onClose={() => setInviteOpen(false)} /> : null}
