@@ -1,11 +1,11 @@
 /**
  * Núcleo de cálculo — Etapa 1.1 (función PURA, fuera de la UI).
  *
- * - `resolveMargin`: el margen NO es fijo; lo resuelve una política de bandas
- *   GLOBALES por valor de piedra (USD). Preparado para apilar lealtad en Cap.2.
- * - `computeQuote`: cotiza 1+ piedras. Los costos por piedra (piedra/IGI/IVA/
- *   margen de su banda) ESCALAN; el flete+seguro y el agente aduanal se
- *   PRORRATEAN POR VALOR entre las piedras de la orden.
+ * - Servicio NewCo = CUOTA FIJA por pieza (`op.marginFixedMxn`) + un % sobre el
+ *   VALOR DE LA PIEDRA (`marginPct` por banda). No marca la logística/aduana.
+ * - `resolveMargin`: resuelve el % por bandas globales de valor de piedra (USD).
+ * - `computeQuote`: cotiza 1+ piedras. Piedra/IGI/IVA ESCALAN; flete+seguro y
+ *   agente aduanal se PRORRATEAN POR VALOR entre las piedras de la orden.
  */
 
 import type {
@@ -28,13 +28,16 @@ export const DEFAULT_OP: OpParams = {
   igiPct: 0,
   dtaPct: 0.8,
   agenteMxn: 6500,
+  marginFixedMxn: 2500, // cuota fija del servicio por pieza
 };
 
-/** Bandas de margen por defecto (configurables por admin). */
+/**
+ * Bandas de margen por defecto (% del valor de la piedra, configurables por
+ * admin). Modelo actual: cuota fija + 3.5% plano. Las bandas permiten variar
+ * el % por valor si se quisiera; hoy es un solo tramo.
+ */
 export const DEFAULT_BANDS: MarginBand[] = [
-  { id: "band-1", minValueUsd: 0, maxValueUsd: 8000, marginPct: 12 },
-  { id: "band-2", minValueUsd: 8000, maxValueUsd: 20000, marginPct: 9 },
-  { id: "band-3", minValueUsd: 20000, maxValueUsd: null, marginPct: 7 },
+  { id: "band-1", minValueUsd: 0, maxValueUsd: null, marginPct: 3.5 },
 ];
 
 function num(v: number): number {
@@ -88,6 +91,7 @@ export function computeQuote(lines: QuoteLineInput[], op: OpParams): Quote {
   const igiPct = num(op.igiPct);
   const dtaPct = num(op.dtaPct);
   const agenteMxn = num(op.agenteMxn);
+  const marginFixedMxn = num(op.marginFixedMxn);
 
   const valorTotalUsd =
     lines.reduce((s, l) => s + num(l.supplierPriceUsd), 0) || 1;
@@ -103,7 +107,9 @@ export function computeQuote(lines: QuoteLineInput[], op: OpParams): Quote {
     const dtaAmt = aduana * (dtaPct / 100);
     const landed = aduana + igiAmt + dtaAmt + agenteShare;
     const marginPct = num(l.marginPct);
-    const marginAmt = landed * (marginPct / 100);
+    // Servicio NewCo = cuota fija por pieza + % del VALOR DE LA PIEDRA (no del
+    // aterrizado: no se marca la logística/aduana, que son pass-through).
+    const marginAmt = marginFixedMxn + stoneMxn * (marginPct / 100);
     const price = landed + marginAmt;
     return {
       stoneId: l.stoneId,

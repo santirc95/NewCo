@@ -147,6 +147,8 @@ export interface OpParams {
   igiPct: number;
   dtaPct: number;
   agenteMxn: number;
+  /** Cuota fija del servicio NewCo por pieza (MXN). */
+  marginFixedMxn: number;
 }
 
 export interface QuoteLineInput {
