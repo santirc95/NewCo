@@ -173,11 +173,10 @@ function SimModal({
         </div>
 
         <p className="mt-2 text-[10.5px] leading-snug text-[var(--outline)]">
-          Estimado repartiendo la logística fija (flete + agente) entre{" "}
-          {sim.aboardCount}{" "}
-          {sim.aboardCount === 1 ? "pieza" : "piezas"} del embarque abierto
-          contando la tuya. Entre más piedras entren, más baja tu parte. El costo
-          definitivo se congela al corte del embarque.
+          Estimado repartiendo la logística fija (flete + agente){" "}
+          <b>por valor</b> entre las piezas del embarque abierto (
+          {sim.aboardCount} contando la tuya). Entre más volumen entre, más baja
+          tu parte. El costo definitivo se congela al corte del embarque.
         </p>
 
         <button

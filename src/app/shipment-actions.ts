@@ -94,11 +94,10 @@ export interface ShipmentBoard {
   /** Pago 1 ya pagado (piedra + IVA + IGI/DTA) de esas piezas — contexto. */
   myPendingPago1Mxn: number;
   totalUsd: number;
-  /** Logística fija del envío (flete + agente) que se reparte entre las piezas. */
+  /** Logística fija del envío (flete + agente) que se reparte POR VALOR. */
   fixedCostMxn: number;
-  /** Costo fijo promedio por pieza hoy y con una piedra más (motor de llenado). */
-  avgFixedPerStoneMxn: number | null;
-  nextAvgFixedPerStoneMxn: number;
+  /** Tu parte de esa logística fija hoy (flete + agente de TUS piezas). */
+  myLogisticsShareMxn: number;
   /** Ahorro total del embarque vs importar cada piedra por separado. */
   totalSavingsMxn: number;
   /** Costos fijos congelados (embarque cerrado). */
@@ -224,6 +223,11 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
   const aggAgente = consolidated
     ? consolidated.lines.reduce((x, l) => x + l.agenteShare, 0)
     : 0;
+  // Tu parte de la logística fija = flete + agente de TUS piezas (por valor).
+  const myLogisticsShareMxn = myOrders.reduce(
+    (x, o) => x + o.logisticsMxn + o.agenteMxn,
+    0,
+  );
 
   return {
     perStone,
@@ -259,8 +263,7 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     myPendingPago1Mxn,
     totalUsd,
     fixedCostMxn,
-    avgFixedPerStoneMxn: lines.length ? fixedCostMxn / lines.length : null,
-    nextAvgFixedPerStoneMxn: fixedCostMxn / (lines.length + 1),
+    myLogisticsShareMxn,
     totalSavingsMxn,
     frozen,
     myOrders,

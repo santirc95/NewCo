@@ -305,26 +305,28 @@ export function ShipmentBoard() {
         </p>
 
         {/* Motor de llenado: la logística (flete + agente) es una CUOTA FIJA
-            que se reparte entre las piezas — más piezas, menor costo por pieza. */}
+            que se reparte POR VALOR — más volumen a bordo, menor tu parte. */}
         <div className="mt-3 border-t border-[var(--hairline)] pt-3">
           <div className="label-caps text-[8.5px] text-[var(--outline)]">
-            Logística del envío · cuota fija repartida entre las piezas
+            Logística del envío · cuota fija {formatMXN(board.fixedCostMxn)} (flete + agente)
           </div>
-          <div className="tabular mt-1 text-[12px] text-[var(--on-surface)]">
-            {formatMXN(board.fixedCostMxn)} fija ÷ {board.count}{" "}
-            {board.count === 1 ? "pieza" : "piezas"} ≈{" "}
-            <b>
-              {board.avgFixedPerStoneMxn !== null
-                ? formatMXN(board.avgFixedPerStoneMxn)
-                : "—"}{" "}
-              c/u
-            </b>
-          </div>
+          <p className="mt-1 text-[11px] leading-snug text-[var(--on-surface-variant)]">
+            Se reparte <b className="text-[var(--on-surface)]">por valor</b> entre
+            las piezas: una piedra grande carga más que una chica (proporcional,
+            justo). Entre más piezas suban al barco, menor la parte de cada quien.
+            {board.myLogisticsShareMxn > 0 ? (
+              <>
+                {" "}Tu parte hoy ≈{" "}
+                <b className="tabular text-[var(--on-surface)]">
+                  {formatMXN(board.myLogisticsShareMxn)}
+                </b>
+                .
+              </>
+            ) : null}
+          </p>
           {board.status === "abierto" ? (
             <p className="mt-1 text-[11px] text-[var(--warn-text)]">
-              ⚓ Con una piedra más bajaría a{" "}
-              {formatMXN(board.nextAvgFixedPerStoneMxn)} c/u — invita a más
-              joyeros para que a todos les salga más barato.
+              ⚓ Invita a más joyeros: más volumen a bordo = más barato para todos.
             </p>
           ) : null}
         </div>

@@ -9,7 +9,7 @@ import {
   DEFAULT_OP,
   IVA_RATE,
 } from "@/lib/quote";
-import type { QuoteLineInput, Stone } from "@/lib/types";
+import type { Order, QuoteLineInput, Stone } from "@/lib/types";
 
 /** Un escenario de simulación por pieza (números de computeQuote). */
 export interface SimScenario {
@@ -78,15 +78,26 @@ export async function simulateStoneAction(
   // Individual — costo real standalone (fijo completo).
   const individual = toScenario(computeQuote([line], DEFAULT_OP));
 
-  // Consolidado — cuota fija repartida entre las piezas a bordo + la tuya.
-  // computeQuote de 1 línea da el 100% del fijo; dividirlo entre aboardCount
-  // simula tu parte prorrateada del barco (por conteo, estimado).
+  // Consolidado — la cuota fija se reparte POR VALOR entre las piezas a bordo
+  // + la tuya. Tu parte = fija × (tu valor / (tu valor + valor a bordo)).
+  // computeQuote de 1 línea da el 100% del fijo; lo escalamos por esa fracción.
   const open = await repo.getOpenShipment();
-  const aboardCount = (open?.orderIds.length ?? 0) + 1;
+  const aboard = open
+    ? (
+        await Promise.all(open.orderIds.map((id) => repo.getOrder(id)))
+      ).filter((o): o is Order => Boolean(o))
+    : [];
+  const aboardCount = aboard.length + 1;
+  const aboardValueUsd = aboard.reduce(
+    (x, o) => x + (o.stoneSnapshot.supplierPriceUsd ?? o.totalUsd),
+    0,
+  );
+  const factor =
+    stone.supplierPriceUsd / (stone.supplierPriceUsd + aboardValueUsd);
   const opConsolidado = {
     ...DEFAULT_OP,
-    logiMxn: DEFAULT_OP.logiMxn / aboardCount,
-    agenteMxn: DEFAULT_OP.agenteMxn / aboardCount,
+    logiMxn: DEFAULT_OP.logiMxn * factor,
+    agenteMxn: DEFAULT_OP.agenteMxn * factor,
   };
   const consolidado = toScenario(computeQuote([line], opConsolidado));
 
