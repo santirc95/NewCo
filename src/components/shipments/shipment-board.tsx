@@ -352,7 +352,34 @@ export function ShipmentBoard() {
               <LedgerRow label="IGI + DTA (pedimento · sin IVA)" value={myPedimentoMxn} marker="var(--c-aduana)" pago1 />
               <LedgerRow label="Flete + seguro internacional" value={myFleteMxn} marker="var(--c-logi)" />
               <LedgerRow label="Agente aduanal" value={myAgenteMxn} marker="var(--c-aduana)" />
-              <LedgerRow label="Servicio de importación NewCo" value={myServiceMxn} marker="var(--c-servicio)" />
+              {/* Servicio NewCo desglosado POR PIEZA (§7.3), no una suma global. */}
+              <div className="px-2 py-2.5">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    aria-hidden
+                    className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
+                    style={{ background: "var(--c-servicio)" }}
+                  />
+                  <span className="text-[13px] text-[var(--on-surface)]">
+                    Servicio de importación NewCo · por pieza
+                  </span>
+                </div>
+                <div className="mt-1.5 flex flex-col gap-1 pl-5">
+                  {board.myOrders.map((o) => (
+                    <div
+                      key={o.orderId}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="tabular min-w-0 truncate text-[11.5px] text-[var(--on-surface-variant)]">
+                        ◆ {o.label}
+                      </span>
+                      <span className="tabular shrink-0 text-[12px] text-[var(--on-surface)]">
+                        {formatMXN(o.serviceMxn)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <LedgerRow label="IVA de los gastos (16%)" value={myIvaExpensesMxn} tag="acreditable" />
               <LedgerRow label="Precio de venta (con IVA incluido)" value={myAllinMxn} total />
             </div>
