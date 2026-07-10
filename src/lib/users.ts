@@ -32,11 +32,19 @@ function seedUsers(): AppUser[] {
       role: "jeweler",
       jewelerId: "jwl-vecchia",
     },
+    {
+      id: "u-aurum",
+      name: "Marco Aurum",
+      email: "joyero2@demo.mx",
+      password: "joyero123",
+      role: "jeweler",
+      jewelerId: "jwl-aurum",
+    },
   ];
 }
 
-const g = globalThis as unknown as { __newcoUsersV4?: AppUser[] };
-const USERS: AppUser[] = g.__newcoUsersV4 ?? (g.__newcoUsersV4 = seedUsers());
+const g = globalThis as unknown as { __newcoUsersV46?: AppUser[] };
+const USERS: AppUser[] = g.__newcoUsersV46 ?? (g.__newcoUsersV46 = seedUsers());
 
 export function findUserByEmail(email: string): AppUser | undefined {
   const e = email.trim().toLowerCase();

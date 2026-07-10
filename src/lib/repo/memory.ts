@@ -73,6 +73,29 @@ function seedJewelers(): Map<string, Jeweler> {
     approved: true,
     createdAt: now(),
   });
+  // Segundo joyero demo — para ver la consolidación real entre dos joyeros
+  // en el mismo embarque (login: joyero2@demo.mx / joyero123).
+  m.set("jwl-aurum", {
+    id: "jwl-aurum",
+    role: "jeweler",
+    name: "Aurum Joyería",
+    rfc: "AJO980210XY2",
+    razonSocial: "Aurum Joyería, S.A. de C.V.",
+    regimenFiscal: "601 — General de Ley Personas Morales",
+    cpFiscal: "64000",
+    usoCfdi: "G03 — Gastos en general",
+    domicilioFiscal: {
+      calle: "Av. Vasconcelos",
+      numExt: "402",
+      colonia: "Del Valle",
+      municipio: "San Pedro Garza García",
+      estado: "Nuevo León",
+      cp: "66220",
+    },
+    active: true,
+    approved: true,
+    createdAt: now(),
+  });
   return m;
 }
 
@@ -109,10 +132,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV45?: DB };
+const g = globalThis as unknown as { __newcoDbV46?: DB };
 const db: DB =
-  g.__newcoDbV45 ??
-  (g.__newcoDbV45 = (() => {
+  g.__newcoDbV46 ??
+  (g.__newcoDbV46 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
