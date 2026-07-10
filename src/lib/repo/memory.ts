@@ -15,7 +15,6 @@ import type {
   Settings,
 } from "@/lib/types";
 import { DEFAULT_BANDS } from "@/lib/quote";
-import { DEFAULT_TIERS } from "@/lib/tiers";
 import { getMockStone } from "@/lib/inventory";
 import type {
   Repo,
@@ -100,7 +99,6 @@ function seedShipments(settings: Settings): Shipment[] {
       status: "abierto",
       orderIds: [],
       paidLogisticsOrderIds: [],
-      tiers: DEFAULT_TIERS.map((t) => ({ ...t })),
     },
   ];
 }
@@ -111,10 +109,10 @@ const SEED_SETTINGS: Settings = {
   cutoffDayOfWeek: 4,
 };
 
-const g = globalThis as unknown as { __newcoDbV44?: DB };
+const g = globalThis as unknown as { __newcoDbV45?: DB };
 const db: DB =
-  g.__newcoDbV44 ??
-  (g.__newcoDbV44 = (() => {
+  g.__newcoDbV45 ??
+  (g.__newcoDbV45 = (() => {
     const settings = { ...SEED_SETTINGS };
     return {
       jewelers: seedJewelers(),
@@ -181,7 +179,6 @@ function bounceOrder(o: Order, from: Shipment): void {
       status: "abierto",
       orderIds: [],
       paidLogisticsOrderIds: [],
-      tiers: from.tiers.map((t) => ({ ...t })),
     };
     db.shipments.push(next);
   }
@@ -483,17 +480,8 @@ export const memoryRepo: Repo = {
       status: "abierto",
       orderIds: [],
       paidLogisticsOrderIds: [],
-      tiers: DEFAULT_TIERS.map((t) => ({ ...t })),
     };
     db.shipments.push(s);
-    return s;
-  },
-  async saveShipmentTiers(id, tiers) {
-    const s = db.shipments.find((x) => x.id === id);
-    if (!s) return undefined;
-    s.tiers = tiers
-      .map((t) => ({ ...t }))
-      .sort((a, b) => a.minStones - b.minStones);
     return s;
   },
   async closeShipment(id, frozen) {

@@ -292,14 +292,11 @@ export interface Order {
 
 export type ShipmentStatus = "abierto" | "cerrado" | "en_transito" | "entregado";
 
-/** Escalón de llenado: rango de piedras → costo logístico aprox. por pieza. */
-export interface ShipmentTier {
-  minStones: number;
-  maxStones: number | null; // null = sin tope
-  costPerStoneMxn: number;
-}
-
-/** Tabla "Embarques" — el barco semanal (ES un simulador vivo). */
+/**
+ * Tabla "Embarques" — el barco semanal (ES un simulador vivo). La logística
+ * (flete + agente aduanal) es una CUOTA FIJA por envío que se reparte por
+ * valor entre las piedras a bordo: más piezas → menor costo por pieza.
+ */
 export interface Shipment {
   id: string;
   weekLabel: string;
@@ -310,8 +307,6 @@ export interface Shipment {
   orderIds: string[];
   /** Órdenes con logística PAGADA — las únicas que entran al cierre atómico. */
   paidLogisticsOrderIds: string[];
-  /** Escalones de llenado (configurables por admin). */
-  tiers: ShipmentTier[];
   /** Costos fijos congelados al cierre (con el nº real de piedras pagadas). */
   frozenLogiMxn?: number;
   frozenAgenteMxn?: number;

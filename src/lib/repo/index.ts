@@ -129,11 +129,6 @@ export interface Repo {
   getShipment(id: string): Promise<Shipment | undefined>;
   getOpenShipment(): Promise<Shipment | undefined>;
   createShipment(weekLabel: string, cutoffAt: string): Promise<Shipment>;
-  /** Escalones de llenado del embarque (admin). */
-  saveShipmentTiers(
-    id: string,
-    tiers: Shipment["tiers"],
-  ): Promise<Shipment | undefined>;
   /**
    * CIERRE ATÓMICO: sólo entran (y definen el costo congelado) las piedras con
    * logística PAGADA; las candidatas sin Pago 2 rebotan al siguiente embarque

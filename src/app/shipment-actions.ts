@@ -14,11 +14,9 @@ import type {
   Settings,
   Shipment,
   ShipmentStatus,
-  ShipmentTier,
   Stone,
   QuoteLineInput,
 } from "@/lib/types";
-import { tierFor, nextTierInfo } from "@/lib/tiers";
 
 /** Mis piedras dentro del embarque (sólo las propias — nunca las ajenas). */
 export interface MyShipmentOrder {
@@ -95,12 +93,10 @@ export interface ShipmentBoard {
   myPendingIvaMxn: number; // IVA de flete + agente + servicio (acreditable)
   /** Pago 1 ya pagado (piedra + IVA + IGI/DTA) de esas piezas — contexto. */
   myPendingPago1Mxn: number;
-  /** Escalones de llenado (admin) + posición actual y siguiente. */
-  tiers: ShipmentTier[];
-  currentTier: ShipmentTier | null;
-  nextTier: { missing: number; tier: ShipmentTier } | null;
   totalUsd: number;
+  /** Logística fija del envío (flete + agente) que se reparte entre las piezas. */
   fixedCostMxn: number;
+  /** Costo fijo promedio por pieza hoy y con una piedra más (motor de llenado). */
   avgFixedPerStoneMxn: number | null;
   nextAvgFixedPerStoneMxn: number;
   /** Ahorro total del embarque vs importar cada piedra por separado. */
@@ -261,9 +257,6 @@ export async function getShipmentBoardAction(): Promise<ShipmentBoard | null> {
     myPendingServiceMxn,
     myPendingIvaMxn,
     myPendingPago1Mxn,
-    tiers: shipment.tiers,
-    currentTier: tierFor(lines.length, shipment.tiers),
-    nextTier: nextTierInfo(lines.length, shipment.tiers),
     totalUsd,
     fixedCostMxn,
     avgFixedPerStoneMxn: lines.length ? fixedCostMxn / lines.length : null,

@@ -12,7 +12,7 @@ import {
 /**
  * Simulación por pieza — UN solo botón: el modal compara ambos escenarios
  * (Importación individual = costo real · Embarque consolidado = ESTIMADO con
- * el escalón vigente del embarque abierto). Sustituye a la antigua página
+ * la cuota fija repartida en el embarque abierto). Sustituye a la antigua página
  * de cotizador; vive en tarjeta, detalle y favoritos.
  */
 export function SimulateButtons({
@@ -159,7 +159,7 @@ function SimModal({
             tag="estimado"
             s={sim.consolidado}
             highlight
-            fixedLabel={`Logística (escalón ${sim.tierLabel})`}
+            fixedLabel="Flete + agente (tu parte)"
           />
         </div>
 
@@ -173,11 +173,11 @@ function SimModal({
         </div>
 
         <p className="mt-2 text-[10.5px] leading-snug text-[var(--outline)]">
-          Estimado con el escalón vigente del embarque abierto: {sim.aboardCount}{" "}
-          {sim.aboardCount === 1 ? "piedra" : "piedras"} contando la tuya →
-          escalón {sim.tierLabel} (~{formatMXN(sim.tierCostMxn)} de logística por
-          pieza). Si entran más piedras, baja. El costo definitivo se congela al
-          corte del embarque.
+          Estimado repartiendo la logística fija (flete + agente) entre{" "}
+          {sim.aboardCount}{" "}
+          {sim.aboardCount === 1 ? "pieza" : "piezas"} del embarque abierto
+          contando la tuya. Entre más piedras entren, más baja tu parte. El costo
+          definitivo se congela al corte del embarque.
         </p>
 
         <button

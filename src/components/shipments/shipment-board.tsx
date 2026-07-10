@@ -5,7 +5,6 @@ import { formatMXN } from "@/lib/compute";
 import { HeroCard } from "@/components/hero-card";
 import { IvaExplainer } from "@/components/iva-explainer";
 import { AnimatedNumber } from "@/components/animated-number";
-import { tierRangeLabel } from "@/lib/tiers";
 import type { ShipmentStatus } from "@/lib/types";
 import {
   getShipmentBoardAction,
@@ -305,43 +304,30 @@ export function ShipmentBoard() {
           Las piedras ajenas se muestran anónimas — sin specs ni dueño.
         </p>
 
-        {/* Escalones de llenado — el costo se comunica por bandas, no por
-            número móvil: un rebote dentro del escalón no cambia el costo. */}
-        {board.tiers.length ? (
-          <div className="mt-3 border-t border-[var(--hairline)] pt-3">
-            <div className="label-caps text-[8.5px] text-[var(--outline)]">
-              Escalones de llenado · costo logístico por pieza
-            </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {board.tiers.map((t) => {
-                const active =
-                  board.currentTier &&
-                  t.minStones === board.currentTier.minStones;
-                return (
-                  <span
-                    key={t.minStones}
-                    className={`tabular rounded-[6px] border px-2 py-1 text-[11px] ${
-                      active
-                        ? "border-[var(--gold)] bg-[var(--warn-bg)] font-semibold text-[var(--warn-text)]"
-                        : "border-[var(--hairline)] text-[var(--on-surface-variant)]"
-                    }`}
-                  >
-                    {tierRangeLabel(t)} → ~{formatMXN(t.costPerStoneMxn)} c/u
-                  </span>
-                );
-              })}
-            </div>
-            {board.status === "abierto" && board.nextTier ? (
-              <p className="mt-2 text-[11px] text-[var(--warn-text)]">
-                ⚓ Estás a {board.nextTier.missing}{" "}
-                {board.nextTier.missing === 1 ? "piedra" : "piedras"} del
-                siguiente escalón (~
-                {formatMXN(board.nextTier.tier.costPerStoneMxn)} c/u) — invita a
-                más joyeros.
-              </p>
-            ) : null}
+        {/* Motor de llenado: la logística (flete + agente) es una CUOTA FIJA
+            que se reparte entre las piezas — más piezas, menor costo por pieza. */}
+        <div className="mt-3 border-t border-[var(--hairline)] pt-3">
+          <div className="label-caps text-[8.5px] text-[var(--outline)]">
+            Logística del envío · cuota fija repartida entre las piezas
           </div>
-        ) : null}
+          <div className="tabular mt-1 text-[12px] text-[var(--on-surface)]">
+            {formatMXN(board.fixedCostMxn)} fija ÷ {board.count}{" "}
+            {board.count === 1 ? "pieza" : "piezas"} ≈{" "}
+            <b>
+              {board.avgFixedPerStoneMxn !== null
+                ? formatMXN(board.avgFixedPerStoneMxn)
+                : "—"}{" "}
+              c/u
+            </b>
+          </div>
+          {board.status === "abierto" ? (
+            <p className="mt-1 text-[11px] text-[var(--warn-text)]">
+              ⚓ Con una piedra más bajaría a{" "}
+              {formatMXN(board.nextAvgFixedPerStoneMxn)} c/u — invita a más
+              joyeros para que a todos les salga más barato.
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {/* Desglose del embarque — mismo lenguaje que el cotizador (agregado) */}
