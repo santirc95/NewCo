@@ -411,24 +411,17 @@ export function ShipmentBoard() {
         </div>
       ) : null}
 
-      {/* ===== BLOQUE 2: lo que paga el joyero (sus piezas) ===== */}
-      <div className="mt-10 border-t border-[var(--hairline)] pt-6">
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <h2 className="label-caps text-[10.5px] font-semibold text-[var(--warn-text)]">
-            Lo que pagas tú
-          </h2>
-          <span className="label-caps text-[9px] text-[var(--outline)]">
-            · sólo tus piezas de este embarque
-          </span>
-        </div>
-      </div>
-
-      {/* Sección: Pago de logística (Pago 2) — una sola acción global. */}
+      {/* ===== Sección: Logística (Pago 2 · sólo tus piezas) ===== */}
       {board.status === "abierto" && board.myPendingCount > 0 ? (
-        <section className="mt-4">
-          <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-            Pago de logística · Pago 2
-          </h2>
+        <section className="mt-10 border-t border-[var(--hairline)] pt-6">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h2 className="label-caps text-[10.5px] font-semibold text-[var(--warn-text)]">
+              Logística
+            </h2>
+            <span className="label-caps text-[9px] text-[var(--outline)]">
+              · Pago 2 · sólo tus piezas
+            </span>
+          </div>
           <div className="mt-2 rounded-xl border border-[var(--gold)] bg-[var(--warn-bg)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-[260px] flex-1">
@@ -480,9 +473,9 @@ export function ShipmentBoard() {
         </section>
       ) : null}
 
-      {/* Sección: Desglose de tus piedras en este embarque */}
-      <section className="mt-4">
-        <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+      {/* ===== Sección: Desglose de tus piedras ===== */}
+      <section className="mt-10 border-t border-[var(--hairline)] pt-6">
+        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
           Desglose de tus piedras
         </h2>
 
