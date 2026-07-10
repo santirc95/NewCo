@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { formatMXN } from "@/lib/compute";
+import { IVA_RATE } from "@/lib/quote";
 import { IvaExplainer } from "@/components/iva-explainer";
 import { AnimatedNumber } from "@/components/animated-number";
 import type { ShipmentStatus } from "@/lib/types";
@@ -44,6 +45,76 @@ function fechaCorta(iso: string) {
   });
 }
 
+function LedgerRow({
+  label,
+  value,
+  marker,
+  total,
+  savings,
+  tag,
+  pago1,
+}: {
+  label: string;
+  value: number;
+  marker?: string;
+  total?: boolean;
+  savings?: boolean;
+  tag?: string;
+  pago1?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-4 px-2 py-2.5 ${
+        total ? "bg-[var(--primary)] text-[var(--on-primary)] rounded-[6px] px-3" : ""
+      }`}
+    >
+      <div className="flex min-w-0 items-center gap-2.5">
+        {marker ? (
+          <span
+            aria-hidden
+            className="h-3.5 w-[3px] shrink-0 rounded-[1px]"
+            style={{ background: marker }}
+          />
+        ) : null}
+        <span
+          className={`truncate ${
+            total
+              ? "text-[13.5px] font-semibold"
+              : savings
+                ? "text-[13px] font-medium text-[#3f7a5e]"
+                : "text-[13px] text-[var(--on-surface)]"
+          }`}
+        >
+          {label}
+        </span>
+        {tag ? (
+          <span className="label-caps shrink-0 rounded-[2px] bg-[rgba(95,163,130,0.15)] px-1.5 py-0.5 text-[9px] text-[#3f7a5e]">
+            {tag}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {pago1 ? (
+          <span className="label-caps rounded-[2px] border border-[#4f9d79] px-1.5 py-0.5 text-[9px] text-[#4f9d79]">
+            ✓ Pagado
+          </span>
+        ) : null}
+        <span
+          className={`tabular text-right ${
+            total
+              ? "text-[14px] font-bold"
+              : savings
+                ? "text-[13.5px] font-semibold text-[#3f7a5e]"
+                : "text-[13px] text-[var(--on-surface)]"
+          }`}
+        >
+          {formatMXN(value)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function ShipmentBoard() {
   const [board, setBoard] = useState<Board | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -83,6 +154,16 @@ export function ShipmentBoard() {
   // Totales del JOYERO (sólo sus piezas) — el joyero no ve el agregado del barco.
   const myAllinMxn = board.myOrders.reduce((s, o) => s + o.projectedMxn, 0);
   const myPriceMxn = board.myOrders.reduce((s, o) => s + o.priceMxn, 0);
+  // Componentes del desglose del joyero (suma de SUS piezas).
+  const myStoneMxn = board.myOrders.reduce((s, o) => s + o.stoneMxn, 0);
+  const myFleteMxn = board.myOrders.reduce((s, o) => s + o.logisticsMxn, 0);
+  const myAgenteMxn = board.myOrders.reduce((s, o) => s + o.agenteMxn, 0);
+  const myServiceMxn = board.myOrders.reduce((s, o) => s + o.serviceMxn, 0);
+  // Pedimento (IGI + DTA) = precio − piedra − flete − agente − servicio.
+  const myPedimentoMxn =
+    myPriceMxn - myStoneMxn - myFleteMxn - myAgenteMxn - myServiceMxn;
+  const myIvaStoneMxn = myStoneMxn * IVA_RATE;
+  const myIvaExpensesMxn = (myFleteMxn + myAgenteMxn + myServiceMxn) * IVA_RATE;
   const payAllLogistics = () => {
     startTransition(async () => {
       await payAllLogisticsAction();
@@ -253,6 +334,36 @@ export function ShipmentBoard() {
         </div>
       ) : null}
 
+      {/* ===== Sección: Desglose del costo (TUS piezas, por componente) ===== */}
+      {board.myOrders.length > 0 ? (
+        <section className="mt-10 border-t border-[var(--hairline)] pt-6">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+              Desglose del costo
+            </h2>
+            <span className="label-caps text-[9px] text-[var(--outline)]">
+              · sólo tus piezas · lo que te corresponde
+            </span>
+          </div>
+          <div className="mt-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
+            <div className="flex flex-col divide-y divide-[var(--hairline)]">
+              <LedgerRow label="Piedras" value={myStoneMxn} marker="var(--c-stone)" pago1 />
+              <LedgerRow label="IVA de piedras (16%)" value={myIvaStoneMxn} marker="var(--c-stone)" pago1 />
+              <LedgerRow label="IGI + DTA (pedimento · sin IVA)" value={myPedimentoMxn} marker="var(--c-aduana)" pago1 />
+              <LedgerRow label="Flete + seguro internacional" value={myFleteMxn} marker="var(--c-logi)" />
+              <LedgerRow label="Agente aduanal" value={myAgenteMxn} marker="var(--c-aduana)" />
+              <LedgerRow label="Servicio de importación NewCo" value={myServiceMxn} marker="var(--c-servicio)" />
+              <LedgerRow label="IVA de los gastos (16%)" value={myIvaExpensesMxn} tag="acreditable" />
+              <LedgerRow label="Precio de venta (con IVA incluido)" value={myAllinMxn} total />
+            </div>
+            <p className="mt-2 text-[10px] text-[var(--outline)]">
+              Piedra, su IVA y pedimento (IGI/DTA) ya los cubriste en el Pago 1;
+              flete, agente, servicio e IVA de gastos van en el Pago 2 (al corte).
+            </p>
+          </div>
+        </section>
+      ) : null}
+
       {/* ===== Sección: Logística (Pago 2 · sólo tus piezas) ===== */}
       {board.status === "abierto" && board.myPendingCount > 0 ? (
         <section className="mt-10 border-t border-[var(--hairline)] pt-6">
@@ -317,9 +428,14 @@ export function ShipmentBoard() {
 
       {/* ===== Sección: Desglose de tus piedras ===== */}
       <section className="mt-10 border-t border-[var(--hairline)] pt-6">
-        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
-          Desglose de tus piedras
-        </h2>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+            Tus piedras
+          </h2>
+          <span className="label-caps text-[9px] text-[var(--outline)]">
+            · detalle pieza por pieza
+          </span>
+        </div>
 
         {board.myOrders.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-[var(--on-surface-variant)]">
