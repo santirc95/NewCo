@@ -203,9 +203,20 @@ export function ShipmentBoard() {
         </div>
       </div>
 
+      {/* ===== BLOQUE 1: el embarque completo (público, anónimo) ===== */}
+      <div className="mt-8 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--hairline)] pt-6">
+        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+          El embarque de esta semana
+        </h2>
+        <span className="label-caps text-[9px] text-[var(--outline)]">
+          · agregado anónimo ·{" "}
+          {board.frozen ? "congelado al cierre" : "proyección (se congela al cierre)"}
+        </span>
+      </div>
+
       {/* El embarque ES el simulador: héroe con el quote consolidado en vivo */}
       {board.aggregate ? (
-        <div className="mt-6">
+        <div className="mt-4">
           <HeroCard
             allin={board.aggregate.allin}
             price={board.aggregate.price}
@@ -235,12 +246,6 @@ export function ShipmentBoard() {
               </>
             }
           />
-          <p className="label-caps mt-2 text-center text-[8.5px] text-[var(--outline)]">
-            Agregado anónimo del embarque ·{" "}
-            {board.frozen
-              ? "costos congelados al cierre"
-              : "proyección — se congela y la confirmas al cierre"}
-          </p>
         </div>
       ) : null}
 
@@ -337,8 +342,7 @@ export function ShipmentBoard() {
       {board.aggregate ? (
         <div className="mt-4 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
           <div className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-            Desglose del embarque · agregado anónimo
-            {board.frozen ? " · congelado" : " · proyección"}
+            Desglose del costo
           </div>
           <div className="mt-3 flex flex-col divide-y divide-[var(--hairline)]">
             <LedgerRow label="Piedras" value={board.aggregate.composition.stone} marker="var(--c-stone)" pago1 />
@@ -401,9 +405,19 @@ export function ShipmentBoard() {
         </div>
       ) : null}
 
-      {/* Sección 1: Pago de logística (Pago 2) — una sola acción global. */}
+      {/* ===== BLOQUE 2: lo tuyo (tus pagos y piezas) ===== */}
+      <div className="mt-10 flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-[var(--hairline)] pt-6">
+        <h2 className="label-caps text-[10.5px] font-semibold text-[var(--on-surface)]">
+          Lo tuyo
+        </h2>
+        <span className="label-caps text-[9px] text-[var(--outline)]">
+          · tus pagos y piezas en este embarque
+        </span>
+      </div>
+
+      {/* Sección: Pago de logística (Pago 2) — una sola acción global. */}
       {board.status === "abierto" && board.myPendingCount > 0 ? (
-        <section className="mt-8">
+        <section className="mt-4">
           <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
             Pago de logística · Pago 2
           </h2>
@@ -458,10 +472,10 @@ export function ShipmentBoard() {
         </section>
       ) : null}
 
-      {/* Sección 2: Desglose de tus piedras en este embarque */}
-      <section className="mt-8">
+      {/* Sección: Desglose de tus piedras en este embarque */}
+      <section className="mt-4">
         <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-          Tus piedras en este embarque
+          Desglose de tus piedras
         </h2>
 
         {board.myOrders.length === 0 ? (
