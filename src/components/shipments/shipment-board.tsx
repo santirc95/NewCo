@@ -401,14 +401,12 @@ export function ShipmentBoard() {
         </div>
       ) : null}
 
-      {/* Mis piedras */}
-      <section className="mt-6">
-        <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
-          Tus piedras en este embarque
-        </h2>
-
-        {/* PAGO 2 GLOBAL — una sola acción para toda la logística pendiente. */}
-        {board.status === "abierto" && board.myPendingCount > 0 ? (
+      {/* Sección 1: Pago de logística (Pago 2) — una sola acción global. */}
+      {board.status === "abierto" && board.myPendingCount > 0 ? (
+        <section className="mt-8">
+          <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+            Pago de logística · Pago 2
+          </h2>
           <div className="mt-2 rounded-xl border border-[var(--gold)] bg-[var(--warn-bg)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-[260px] flex-1">
@@ -457,7 +455,14 @@ export function ShipmentBoard() {
               </button>
             </div>
           </div>
-        ) : null}
+        </section>
+      ) : null}
+
+      {/* Sección 2: Desglose de tus piedras en este embarque */}
+      <section className="mt-8">
+        <h2 className="label-caps text-[10px] text-[var(--on-surface-variant)]">
+          Tus piedras en este embarque
+        </h2>
 
         {board.myOrders.length === 0 ? (
           <p className="mt-2 text-[12.5px] text-[var(--on-surface-variant)]">
